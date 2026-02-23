@@ -18,7 +18,7 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		FD33FD5F2EDF32D7002A6548 /* ClaudeIsland */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = ClaudeIsland;
+			path = AgentIsland;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */

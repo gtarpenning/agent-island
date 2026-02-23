@@ -1,306 +1,199 @@
 #!/bin/bash
-# Create a release: notarize, create DMG, sign for Sparkle, upload to GitHub, update website
-set -e
+# Create release DMG and upload to GitHub using environment variables.
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BUILD_DIR="$PROJECT_DIR/build"
-EXPORT_PATH="$BUILD_DIR/export"
-RELEASE_DIR="$PROJECT_DIR/releases"
-KEYS_DIR="$PROJECT_DIR/.sparkle-keys"
+DEFAULT_APP_PATH="$BUILD_DIR/export/Agent Island.app"
 
-# GitHub repository (owner/repo format)
-GITHUB_REPO="farouqaldori/claude-island"
+usage() {
+    cat <<'EOF'
+Usage:
+  GITHUB_REPO=owner/repo [other env vars] ./scripts/create-release.sh
 
-# Website repo for auto-updating appcast
-WEBSITE_DIR="${CLAUDE_ISLAND_WEBSITE:-$PROJECT_DIR/../ClaudeIsland-website}"
-WEBSITE_PUBLIC="$WEBSITE_DIR/public"
+Required env vars:
+  GITHUB_REPO              GitHub repo in owner/repo format.
 
-APP_PATH="$EXPORT_PATH/Agent Island.app"
-APP_NAME="ClaudeIsland"
-KEYCHAIN_PROFILE="ClaudeIsland"
+Required unless SKIP_NOTARIZATION=1:
+  NOTARY_KEYCHAIN_PROFILE  notarytool keychain profile name.
+
+Optional env vars:
+  APP_PATH                 Path to .app (default: ./build/export/Agent Island.app)
+  RELEASE_DIR              Output directory for DMG (default: ./releases)
+  APP_NAME                 Artifact prefix (default: ClaudeIsland)
+  DMG_VOLUME_NAME          DMG volume name (default: Agent Island)
+  SKIP_NOTARIZATION        Set to 1 to skip notarizing app and DMG.
+  SKIP_GITHUB_UPLOAD       Set to 1 to skip GitHub release upload.
+  BUILD_IF_MISSING         Set to 1 to run ./scripts/build.sh if APP_PATH is missing.
+  RELEASE_TAG              Git tag name (default: v<CFBundleShortVersionString>)
+  RELEASE_TITLE            GitHub release title (default: Agent Island v<version>)
+  RELEASE_NOTES            GitHub release notes text.
+EOF
+}
+
+if [ "${1:-}" = "--help" ]; then
+    usage
+    exit 0
+fi
+
+APP_PATH="${APP_PATH:-$DEFAULT_APP_PATH}"
+RELEASE_DIR="${RELEASE_DIR:-$PROJECT_DIR/releases}"
+APP_NAME="${APP_NAME:-ClaudeIsland}"
+DMG_VOLUME_NAME="${DMG_VOLUME_NAME:-Agent Island}"
+SKIP_NOTARIZATION="${SKIP_NOTARIZATION:-0}"
+SKIP_GITHUB_UPLOAD="${SKIP_GITHUB_UPLOAD:-0}"
+BUILD_IF_MISSING="${BUILD_IF_MISSING:-0}"
 
 echo "=== Creating Release ==="
 echo ""
 
-# Check if app exists
+if [ ! -d "$APP_PATH" ] && [ "$BUILD_IF_MISSING" = "1" ]; then
+    echo "App not found at $APP_PATH, running build script..."
+    "$SCRIPT_DIR/build.sh"
+fi
+
 if [ ! -d "$APP_PATH" ]; then
     echo "ERROR: App not found at $APP_PATH"
-    echo "Run ./scripts/build.sh first"
+    echo "Run ./scripts/build.sh first or set BUILD_IF_MISSING=1"
     exit 1
 fi
 
-# Get version from app
+MISSING_ENV=0
+if [ -z "${GITHUB_REPO:-}" ] && [ "$SKIP_GITHUB_UPLOAD" != "1" ]; then
+    echo "ERROR: GITHUB_REPO is required unless SKIP_GITHUB_UPLOAD=1"
+    MISSING_ENV=1
+fi
+if [ "$SKIP_NOTARIZATION" != "1" ] && [ -z "${NOTARY_KEYCHAIN_PROFILE:-}" ]; then
+    echo "ERROR: NOTARY_KEYCHAIN_PROFILE is required unless SKIP_NOTARIZATION=1"
+    MISSING_ENV=1
+fi
+if [ "$MISSING_ENV" -ne 0 ]; then
+    echo ""
+    usage
+    exit 1
+fi
+
+# Get version from app bundle
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist")
 BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Contents/Info.plist")
+TAG="${RELEASE_TAG:-v$VERSION}"
+TITLE="${RELEASE_TITLE:-Agent Island v$VERSION}"
 
+echo "App: $APP_PATH"
 echo "Version: $VERSION (build $BUILD)"
+echo "Tag: $TAG"
 echo ""
 
 mkdir -p "$RELEASE_DIR"
+DMG_PATH="$RELEASE_DIR/$APP_NAME-$VERSION.dmg"
 
-# ============================================
-# Step 1: Notarize the app
-# ============================================
-echo "=== Step 1: Notarizing ==="
-
-# Check if keychain profile exists
-if ! xcrun notarytool history --keychain-profile "$KEYCHAIN_PROFILE" &>/dev/null; then
-    echo ""
-    echo "No keychain profile found. Set up credentials with:"
-    echo ""
-    echo "  xcrun notarytool store-credentials \"$KEYCHAIN_PROFILE\" \\"
-    echo "      --apple-id \"your@email.com\" \\"
-    echo "      --team-id \"2DKS5U9LV4\" \\"
-    echo "      --password \"xxxx-xxxx-xxxx-xxxx\""
-    echo ""
-    echo "Create an app-specific password at: https://appleid.apple.com"
-    echo ""
-    read -p "Skip notarization for now? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+if [ "$SKIP_NOTARIZATION" != "1" ]; then
+    echo "=== Step 1: Notarizing app ==="
+    if ! xcrun notarytool history --keychain-profile "$NOTARY_KEYCHAIN_PROFILE" >/dev/null 2>&1; then
+        echo "ERROR: notarytool keychain profile '$NOTARY_KEYCHAIN_PROFILE' is not available."
+        echo "Create it with:"
+        echo "  xcrun notarytool store-credentials \"$NOTARY_KEYCHAIN_PROFILE\" --apple-id <id> --team-id <team> --password <app-password>"
         exit 1
     fi
-    SKIP_NOTARIZATION=true
-    echo "WARNING: Skipping notarization. Users will see Gatekeeper warnings!"
-else
-    # Create zip for notarization
+
     ZIP_PATH="$BUILD_DIR/$APP_NAME-$VERSION.zip"
     echo "Creating zip for notarization..."
     ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
 
-    echo "Submitting for notarization..."
-    xcrun notarytool submit "$ZIP_PATH" \
-        --keychain-profile "$KEYCHAIN_PROFILE" \
-        --wait
+    echo "Submitting app zip to notarytool..."
+    xcrun notarytool submit "$ZIP_PATH" --keychain-profile "$NOTARY_KEYCHAIN_PROFILE" --wait
 
-    echo "Stapling notarization ticket..."
+    echo "Stapling app..."
     xcrun stapler staple "$APP_PATH"
-
-    rm "$ZIP_PATH"
-    echo "Notarization complete!"
+    rm -f "$ZIP_PATH"
+    echo ""
 fi
 
-echo ""
-
-# ============================================
-# Step 2: Create DMG
-# ============================================
 echo "=== Step 2: Creating DMG ==="
+rm -f "$DMG_PATH"
 
-DMG_PATH="$RELEASE_DIR/$APP_NAME-$VERSION.dmg"
-
-# Remove existing DMG if present
-if [ -f "$DMG_PATH" ]; then
-    echo "Removing existing DMG..."
-    rm -f "$DMG_PATH"
-fi
-
-# Check if create-dmg is available (prettier DMG)
-if command -v create-dmg &> /dev/null; then
-    echo "Using create-dmg for prettier output..."
+APP_BUNDLE_NAME="$(basename "$APP_PATH")"
+APP_PARENT_DIR="$(dirname "$APP_PATH")"
+if command -v create-dmg >/dev/null 2>&1; then
     create-dmg \
-        --volname "Agent Island" \
+        --overwrite \
+        --volname "$DMG_VOLUME_NAME" \
         --window-size 600 400 \
         --icon-size 100 \
-        --icon "Agent Island.app" 150 200 \
+        --icon "$APP_BUNDLE_NAME" 150 200 \
         --app-drop-link 450 200 \
-        --hide-extension "Agent Island.app" \
+        --hide-extension "$APP_BUNDLE_NAME" \
         "$DMG_PATH" \
-        "$APP_PATH"
+        "$APP_PARENT_DIR"
 else
-    echo "Using hdiutil (install create-dmg for prettier DMG: brew install create-dmg)"
-    hdiutil create -volname "Agent Island" \
+    echo "create-dmg not found, using hdiutil."
+    hdiutil create \
+        -volname "$DMG_VOLUME_NAME" \
         -srcfolder "$APP_PATH" \
-        -ov -format UDZO \
+        -ov \
+        -format UDZO \
         "$DMG_PATH"
 fi
-
 echo "DMG created: $DMG_PATH"
 echo ""
 
-# ============================================
-# Step 3: Notarize the DMG
-# ============================================
-if [ -z "$SKIP_NOTARIZATION" ]; then
+if [ "$SKIP_NOTARIZATION" != "1" ]; then
     echo "=== Step 3: Notarizing DMG ==="
-
-    xcrun notarytool submit "$DMG_PATH" \
-        --keychain-profile "$KEYCHAIN_PROFILE" \
-        --wait
-
+    xcrun notarytool submit "$DMG_PATH" --keychain-profile "$NOTARY_KEYCHAIN_PROFILE" --wait
     xcrun stapler staple "$DMG_PATH"
-    echo "DMG notarized!"
+    echo "DMG notarized."
+    echo ""
+else
+    echo "Skipping notarization (SKIP_NOTARIZATION=1)."
     echo ""
 fi
 
-# ============================================
-# Step 4: Sign for Sparkle and generate appcast
-# ============================================
-echo "=== Step 4: Signing for Sparkle ==="
-
-# Find Sparkle tools
-SPARKLE_SIGN=""
-GENERATE_APPCAST=""
-
-POSSIBLE_PATHS=(
-    "$HOME/Library/Developer/Xcode/DerivedData/ClaudeIsland-*/SourcePackages/artifacts/sparkle/Sparkle/bin"
-)
-
-for path_pattern in "${POSSIBLE_PATHS[@]}"; do
-    for path in $path_pattern; do
-        if [ -x "$path/sign_update" ]; then
-            SPARKLE_SIGN="$path/sign_update"
-            GENERATE_APPCAST="$path/generate_appcast"
-            break 2
-        fi
-    done
-done
-
-if [ -z "$SPARKLE_SIGN" ]; then
-    echo "WARNING: Could not find Sparkle tools."
-    echo "Build the project in Xcode first to download Sparkle package."
+if [ "$SKIP_GITHUB_UPLOAD" = "1" ]; then
+    echo "Skipping GitHub upload (SKIP_GITHUB_UPLOAD=1)."
     echo ""
-    echo "Skipping Sparkle signing. You'll need to manually:"
-    echo "1. Sign the DMG with sign_update"
-    echo "2. Generate appcast with generate_appcast"
-else
-    # Check for private key
-    if [ ! -f "$KEYS_DIR/eddsa_private_key" ]; then
-        echo "WARNING: No private key found at $KEYS_DIR/eddsa_private_key"
-        echo "Run ./scripts/generate-keys.sh first"
-        echo ""
-        echo "Skipping Sparkle signing."
-    else
-        # Generate signature
-        echo "Signing DMG for Sparkle..."
-        SIGNATURE=$("$SPARKLE_SIGN" --ed-key-file "$KEYS_DIR/eddsa_private_key" "$DMG_PATH")
-
-        echo ""
-        echo "Sparkle signature:"
-        echo "$SIGNATURE"
-        echo ""
-
-        # Generate/update appcast
-        echo "Generating appcast..."
-        APPCAST_DIR="$RELEASE_DIR/appcast"
-        mkdir -p "$APPCAST_DIR"
-
-        # Copy DMG to appcast directory
-        cp "$DMG_PATH" "$APPCAST_DIR/"
-
-        # Generate appcast.xml
-        "$GENERATE_APPCAST" --ed-key-file "$KEYS_DIR/eddsa_private_key" "$APPCAST_DIR"
-
-        echo "Appcast generated at: $APPCAST_DIR/appcast.xml"
-    fi
+    echo "=== Release Complete ==="
+    echo "DMG: $DMG_PATH"
+    exit 0
 fi
 
-echo ""
-
-# ============================================
-# Step 5: Create GitHub Release
-# ============================================
-echo "=== Step 5: Creating GitHub Release ==="
-
-if ! command -v gh &> /dev/null; then
-    echo "WARNING: gh CLI not found. Install with: brew install gh"
-    echo "Skipping GitHub release."
-else
-    # Check if release already exists
-    if gh release view "v$VERSION" --repo "$GITHUB_REPO" &>/dev/null; then
-        echo "Release v$VERSION already exists. Updating..."
-        gh release upload "v$VERSION" "$DMG_PATH" --repo "$GITHUB_REPO" --clobber
-    else
-        echo "Creating release v$VERSION..."
-        gh release create "v$VERSION" "$DMG_PATH" \
-            --repo "$GITHUB_REPO" \
-            --title "Agent Island v$VERSION" \
-            --notes "## Agent Island v$VERSION
-
-### Installation
-1. Download \`$APP_NAME-$VERSION.dmg\`
-2. Open the DMG and drag Agent Island to Applications
-3. Launch Agent Island from Applications
-
-### Auto-updates
-After installation, Agent Island will automatically check for updates."
-    fi
-
-    GITHUB_DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v$VERSION/$APP_NAME-$VERSION.dmg"
-    echo "GitHub release created: https://github.com/$GITHUB_REPO/releases/tag/v$VERSION"
-    echo "Download URL: $GITHUB_DOWNLOAD_URL"
+echo "=== Step 4: Uploading to GitHub Release ==="
+if ! command -v gh >/dev/null 2>&1; then
+    echo "ERROR: gh CLI not found. Install with: brew install gh"
+    exit 1
 fi
 
-echo ""
-
-# ============================================
-# Step 6: Update website appcast and deploy
-# ============================================
-echo "=== Step 6: Updating Website ==="
-
-if [ -d "$WEBSITE_PUBLIC" ] && [ -f "$RELEASE_DIR/appcast/appcast.xml" ]; then
-    # Copy appcast to website
-    cp "$RELEASE_DIR/appcast/appcast.xml" "$WEBSITE_PUBLIC/appcast.xml"
-
-    # Update the download URL in appcast to point to GitHub releases
-    if [ -n "$GITHUB_DOWNLOAD_URL" ]; then
-        sed -i '' "s|url=\"[^\"]*$APP_NAME-$VERSION.dmg\"|url=\"$GITHUB_DOWNLOAD_URL\"|g" "$WEBSITE_PUBLIC/appcast.xml"
-        echo "Updated appcast.xml with GitHub download URL"
-    fi
-
-    # Update src/config.ts with latest version and download URL
-    CONFIG_FILE="$WEBSITE_DIR/src/config.ts"
-    if [ -n "$GITHUB_DOWNLOAD_URL" ]; then
-        cat > "$CONFIG_FILE" << EOF
-// Auto-updated by create-release.sh
-export const LATEST_VERSION = "$VERSION";
-export const DOWNLOAD_URL = "$GITHUB_DOWNLOAD_URL";
-EOF
-        echo "Updated src/config.ts with version $VERSION"
-    fi
-
-    # Commit and push website changes
-    cd "$WEBSITE_DIR"
-    if [ -d ".git" ]; then
-        git add public/appcast.xml src/config.ts
-        if ! git diff --cached --quiet; then
-            git commit -m "Update appcast for v$VERSION"
-            echo "Committed appcast update"
-
-            read -p "Push website changes to deploy? (Y/n) " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-                git push
-                echo "Website deployed!"
-            else
-                echo "Changes committed but not pushed. Run 'git push' in $WEBSITE_DIR to deploy."
-            fi
-        else
-            echo "No changes to commit"
-        fi
-    else
-        echo "Copied appcast.xml to $WEBSITE_PUBLIC/"
-        echo "Note: Website directory is not a git repo"
-    fi
-    cd "$PROJECT_DIR"
-else
-    echo "Website directory not found or appcast not generated"
-    echo "Skipping website update."
+if [ -n "${GITHUB_TOKEN:-}" ] && [ -z "${GH_TOKEN:-}" ]; then
+    export GH_TOKEN="$GITHUB_TOKEN"
 fi
 
-echo ""
+if ! gh auth status >/dev/null 2>&1; then
+    echo "ERROR: GitHub CLI is not authenticated."
+    echo "Run 'gh auth login' or export GITHUB_TOKEN."
+    exit 1
+fi
 
+if gh release view "$TAG" --repo "$GITHUB_REPO" >/dev/null 2>&1; then
+    echo "Release $TAG exists, uploading DMG with --clobber..."
+    gh release upload "$TAG" "$DMG_PATH" --repo "$GITHUB_REPO" --clobber
+else
+    if [ -n "${RELEASE_NOTES:-}" ]; then
+        NOTES="$RELEASE_NOTES"
+    else
+        NOTES="$(printf 'Release %s (build %s)\n\nDownload the DMG and drag Agent Island to Applications.' "$VERSION" "$BUILD")"
+    fi
+    echo "Creating release $TAG..."
+    gh release create "$TAG" "$DMG_PATH" \
+        --repo "$GITHUB_REPO" \
+        --title "$TITLE" \
+        --notes "$NOTES"
+fi
+
+GITHUB_RELEASE_URL="https://github.com/$GITHUB_REPO/releases/tag/$TAG"
+GITHUB_DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/$TAG/$APP_NAME-$VERSION.dmg"
+
+echo ""
 echo "=== Release Complete ==="
-echo ""
-echo "Files created:"
-echo "  - DMG: $DMG_PATH"
-if [ -f "$RELEASE_DIR/appcast/appcast.xml" ]; then
-    echo "  - Appcast: $RELEASE_DIR/appcast/appcast.xml"
-fi
-if [ -n "$GITHUB_DOWNLOAD_URL" ]; then
-    echo "  - GitHub: https://github.com/$GITHUB_REPO/releases/tag/v$VERSION"
-fi
-if [ -f "$WEBSITE_PUBLIC/appcast.xml" ]; then
-    echo "  - Website: $WEBSITE_PUBLIC/appcast.xml"
-fi
+echo "DMG: $DMG_PATH"
+echo "GitHub release: $GITHUB_RELEASE_URL"
+echo "Direct download: $GITHUB_DOWNLOAD_URL"
