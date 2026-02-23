@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		FD0F42E72EE7ABA400980302 /* Mixpanel in Frameworks */ = {isa = PBXBuildFile; productRef = FD0F42E62EE7ABA400980302 /* Mixpanel */; };
 		FDA49F7D2EE11E3C00F9612E /* Markdown in Frameworks */ = {isa = PBXBuildFile; productRef = FD33FD722EDF32D7002A6548 /* Markdown */; };
 		FDA49F7E2EE11E3C00F9612E /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = FDA49F7F2EE11E3C00F9612E /* Sparkle */; };
 /* End PBXBuildFile section */
@@ -16,22 +15,9 @@
 		FD33FD5D2EDF32D7002A6548 /* Agent Island.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Agent Island.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		FD33FD702EDF32D7002A6548 /* Exceptions for "ClaudeIsland" folder in "ClaudeIsland" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = FD33FD5C2EDF32D7002A6548 /* ClaudeIsland */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		FD33FD5F2EDF32D7002A6548 /* ClaudeIsland */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				FD33FD702EDF32D7002A6548 /* Exceptions for "ClaudeIsland" folder in "ClaudeIsland" target */,
-			);
 			path = ClaudeIsland;
 			sourceTree = "<group>";
 		};
@@ -42,7 +28,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FD0F42E72EE7ABA400980302 /* Mixpanel in Frameworks */,
 				FDA49F7D2EE11E3C00F9612E /* Markdown in Frameworks */,
 				FDA49F7E2EE11E3C00F9612E /* Sparkle in Frameworks */,
 			);
@@ -89,7 +74,6 @@
 			packageProductDependencies = (
 				FD33FD722EDF32D7002A6548 /* Markdown */,
 				FDA49F7F2EE11E3C00F9612E /* Sparkle */,
-				FD0F42E62EE7ABA400980302 /* Mixpanel */,
 			);
 			productName = ClaudeIsland;
 			productReference = FD33FD5D2EDF32D7002A6548 /* Agent Island.app */;
@@ -110,7 +94,7 @@
 					};
 				};
 			};
-			buildConfigurationList = FD33FD582EDF32D7002A6548 /* Build configuration list for PBXProject "ClaudeIsland" */;
+			buildConfigurationList = FD33FD582EDF32D7002A6548 /* Build configuration list for PBXProject "AgentIsland" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -122,7 +106,6 @@
 			packageReferences = (
 				FD33FD712EDF32D7002A6548 /* XCRemoteSwiftPackageReference "swift-markdown" */,
 				FDA49F802EE11E3C00F9612E /* XCRemoteSwiftPackageReference "Sparkle" */,
-				FD0F42E52EE7ABA400980302 /* XCRemoteSwiftPackageReference "mixpanel-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FD33FD5E2EDF32D7002A6548 /* Products */;
@@ -284,21 +267,22 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 3;
-				DEVELOPMENT_TEAM = 2DKS5U9LV4;
+				DEVELOPMENT_TEAM = JL39GTJ62X;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AgentIsland/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Agent Island";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright 2025. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.2;
-				PRODUCT_BUNDLE_IDENTIFIER = com.celestial.ClaudeIsland;
+				PRODUCT_BUNDLE_IDENTIFIER = com.celestial.AgentIsland;
 				PRODUCT_NAME = "Agent Island";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -319,21 +303,22 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 3;
-				DEVELOPMENT_TEAM = 2DKS5U9LV4;
+				DEVELOPMENT_TEAM = JL39GTJ62X;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AgentIsland/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Agent Island";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright 2025. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.2;
-				PRODUCT_BUNDLE_IDENTIFIER = com.celestial.ClaudeIsland;
+				PRODUCT_BUNDLE_IDENTIFIER = com.celestial.AgentIsland;
 				PRODUCT_NAME = "Agent Island";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -348,7 +333,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		FD33FD582EDF32D7002A6548 /* Build configuration list for PBXProject "ClaudeIsland" */ = {
+		FD33FD582EDF32D7002A6548 /* Build configuration list for PBXProject "AgentIsland" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				FD33FD662EDF32D8002A6548 /* Debug */,
@@ -369,14 +354,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		FD0F42E52EE7ABA400980302 /* XCRemoteSwiftPackageReference "mixpanel-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/mixpanel/mixpanel-swift";
-			requirement = {
-				branch = master;
-				kind = branch;
-			};
-		};
 		FD33FD712EDF32D7002A6548 /* XCRemoteSwiftPackageReference "swift-markdown" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/swiftlang/swift-markdown";
@@ -396,11 +373,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		FD0F42E62EE7ABA400980302 /* Mixpanel */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = FD0F42E52EE7ABA400980302 /* XCRemoteSwiftPackageReference "mixpanel-swift" */;
-			productName = Mixpanel;
-		};
 		FD33FD722EDF32D7002A6548 /* Markdown */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = FD33FD712EDF32D7002A6548 /* XCRemoteSwiftPackageReference "swift-markdown" */;
