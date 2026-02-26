@@ -1,6 +1,6 @@
 //
 //  ChatView.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Redesigned chat interface with clean visual hierarchy
 //
@@ -282,7 +282,7 @@ struct ChatView: View {
 
                     // Processing indicator at bottom (first due to flip)
                     if isProcessing {
-                        ProcessingIndicatorView(turnId: lastUserMessageId)
+                        ProcessingIndicatorView(turnId: lastUserMessageId, agentId: session.agentId)
                             .padding(.horizontal, 16)
                             .scaleEffect(x: 1, y: -1)
                             .transition(.asymmetric(
@@ -584,17 +584,20 @@ struct AssistantMessageView: View {
 
 struct ProcessingIndicatorView: View {
     private let baseTexts = ["Processing", "Working"]
-    private let color = Color(red: 0.85, green: 0.47, blue: 0.34) // Claude orange
+    private let color: Color
     private let baseText: String
 
     @State private var dotCount: Int = 1
     private let timer = Timer.publish(every: 0.4, on: .main, in: .common).autoconnect()
 
     /// Use a turnId to select text consistently per user turn
-    init(turnId: String = "") {
+    init(turnId: String = "", agentId: String = "claude") {
         // Use hash of turnId to pick base text consistently for this turn
         let index = abs(turnId.hashValue) % baseTexts.count
         baseText = baseTexts[index]
+        color = agentId == "codex"
+            ? Color(red: 0.06, green: 0.73, blue: 0.51)
+            : Color(red: 0.85, green: 0.47, blue: 0.34)
     }
 
     private var dots: String {
@@ -603,7 +606,7 @@ struct ProcessingIndicatorView: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 6) {
-            ProcessingSpinner()
+            ProcessingSpinner(color: color)
                 .frame(width: 6)
 
             Text(baseText + dots)

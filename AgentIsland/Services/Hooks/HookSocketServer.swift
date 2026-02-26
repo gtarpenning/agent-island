@@ -1,6 +1,6 @@
 //
 //  HookSocketServer.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Unix domain socket server for real-time hook events
 //  Supports request/response for permission decisions
@@ -10,10 +10,11 @@ import Foundation
 import os.log
 
 /// Logger for hook socket server
-private let logger = Logger(subsystem: "com.claudeisland", category: "Hooks")
+private let logger = Logger(subsystem: "com.agentisland", category: "Hooks")
 
 /// Event received from Claude Code hooks
 struct HookEvent: Codable, Sendable {
+    let agentId: String?
     let sessionId: String
     let cwd: String
     let event: String
@@ -27,6 +28,7 @@ struct HookEvent: Codable, Sendable {
     let message: String?
 
     enum CodingKeys: String, CodingKey {
+        case agentId = "agent_id"
         case sessionId = "session_id"
         case cwd, event, status, pid, tty, tool
         case toolInput = "tool_input"
@@ -36,7 +38,8 @@ struct HookEvent: Codable, Sendable {
     }
 
     /// Create a copy with updated toolUseId
-    init(sessionId: String, cwd: String, event: String, status: String, pid: Int?, tty: String?, tool: String?, toolInput: [String: AnyCodable]?, toolUseId: String?, notificationType: String?, message: String?) {
+    init(agentId: String? = nil, sessionId: String, cwd: String, event: String, status: String, pid: Int?, tty: String?, tool: String?, toolInput: [String: AnyCodable]?, toolUseId: String?, notificationType: String?, message: String?) {
+        self.agentId = agentId
         self.sessionId = sessionId
         self.cwd = cwd
         self.event = event
@@ -113,7 +116,7 @@ class HookSocketServer {
     private var acceptSource: DispatchSourceRead?
     private var eventHandler: HookEventHandler?
     private var permissionFailureHandler: PermissionFailureHandler?
-    private let queue = DispatchQueue(label: "com.claudeisland.socket", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.agentisland.socket", qos: .userInitiated)
 
     /// Pending permission requests indexed by toolUseId
     private var pendingPermissions: [String: PendingPermission] = [:]
@@ -437,6 +440,7 @@ class HookSocketServer {
             logger.debug("Permission request - keeping socket open for \(event.sessionId.prefix(8), privacy: .public) tool:\(toolUseId.prefix(12), privacy: .public)")
 
             let updatedEvent = HookEvent(
+                agentId: event.agentId,
                 sessionId: event.sessionId,
                 cwd: event.cwd,
                 event: event.event,

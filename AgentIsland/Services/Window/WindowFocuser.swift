@@ -1,6 +1,6 @@
 //
 //  WindowFocuser.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Focuses windows using yabai
 //

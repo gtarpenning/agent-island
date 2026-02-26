@@ -1,6 +1,6 @@
 //
 //  WindowFinder.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Finds windows using yabai window manager
 //

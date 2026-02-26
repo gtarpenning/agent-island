@@ -1,6 +1,6 @@
 //
 //  TmuxSessionMatcher.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Matches tmux panes to session files by sampling visible text
 //

@@ -1,6 +1,6 @@
 //
 //  ScreenObserver.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Monitors screen configuration changes
 //

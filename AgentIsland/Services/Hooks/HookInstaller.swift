@@ -1,6 +1,6 @@
 //
 //  HookInstaller.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Auto-installs Claude Code hooks on app launch
 //

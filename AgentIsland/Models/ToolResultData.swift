@@ -1,6 +1,6 @@
 //
 //  ToolResultData.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Structured models for all Claude Code tool results
 //

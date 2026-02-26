@@ -1,6 +1,6 @@
 //
 //  ClaudeInstancesView.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Minimal instances list matching Dynamic Island aesthetic
 //
@@ -28,7 +28,7 @@ struct ClaudeInstancesView: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.white.opacity(0.4))
 
-            Text("Run claude in terminal")
+            Text("Run claude or codex in terminal")
                 .font(.system(size: 11))
                 .foregroundColor(.white.opacity(0.25))
         }
@@ -131,6 +131,8 @@ struct InstanceRow: View {
     @State private var isYabaiAvailable = false
 
     private let claudeOrange = Color(red: 0.85, green: 0.47, blue: 0.34)
+    private let codexBlue = Color(red: 0.24, green: 0.52, blue: 0.96)
+    private let codexGreen = Color(red: 0.06, green: 0.73, blue: 0.51)
     private let spinnerSymbols = ["·", "✢", "✳", "∗", "✻", "✽"]
     private let spinnerTimer = Timer.publish(every: 0.15, on: .main, in: .common).autoconnect()
 
@@ -145,6 +147,24 @@ struct InstanceRow: View {
         return toolName == "AskUserQuestion"
     }
 
+    /// Latest non-thinking assistant text for Codex rows.
+    private var codexAssistantPreview: String? {
+        guard session.agentId == "codex" else { return nil }
+
+        for item in session.chatItems.reversed() {
+            if case .assistant(let text) = item.type,
+               let truncated = truncatePreview(text) {
+                return truncated
+            }
+        }
+
+        guard session.lastMessageRole == "assistant",
+              let fallback = session.lastMessage else {
+            return nil
+        }
+        return truncatePreview(fallback)
+    }
+
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
             // State indicator on left
@@ -153,10 +173,30 @@ struct InstanceRow: View {
 
             // Text content
             VStack(alignment: .leading, spacing: 2) {
-                Text(session.displayTitle)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(session.displayTitle)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+
+                    if session.agentId == "codex" {
+                        Text("#\(session.sessionId.prefix(6))")
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                            .foregroundColor(.white.opacity(0.35))
+
+                        CodexAnimationIcon(size: 10, isAnimating: false, fallbackColor: codexBlue)
+                    }
+
+                    if let label = agentLabel, let color = agentAccentColor {
+                        Text(label)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(color)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(color.opacity(0.15))
+                            .clipShape(Capsule())
+                    }
+                }
 
                 // Show tool call when waiting for approval, otherwise last activity
                 if isWaitingForApproval, let toolName = session.pendingToolName {
@@ -177,6 +217,11 @@ struct InstanceRow: View {
                                 .lineLimit(1)
                         }
                     }
+                } else if let codexPreview = codexAssistantPreview {
+                    Text(codexPreview)
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.4))
+                        .lineLimit(1)
                 } else if let role = session.lastMessageRole {
                     switch role {
                     case "tool":
@@ -220,6 +265,11 @@ struct InstanceRow: View {
                     Text(lastMsg)
                         .font(.system(size: 11))
                         .foregroundColor(.white.opacity(0.4))
+                        .lineLimit(1)
+                } else {
+                    Text(SessionPhaseHelpers.phaseDescription(for: session.phase))
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.35))
                         .lineLimit(1)
                 }
             }
@@ -292,8 +342,40 @@ struct InstanceRow: View {
         }
     }
 
+
+    /// Accent color for the agent that owns this session
+    private var agentAccentColor: Color? {
+        switch session.agentId {
+        case "claude":
+            return nil  // Claude uses its own orange spinner, no extra indicator
+        case "codex":
+            return codexBlue  // Codex blue
+        default:
+            return Color.purple
+        }
+    }
+
+    /// Short label for non-Claude agents shown in the row
+    private var agentLabel: String? {
+        switch session.agentId {
+        case "claude": return nil
+        case "codex": return nil
+        default: return session.agentId
+        }
+    }
+
     @ViewBuilder
     private var stateIndicator: some View {
+        if session.agentId == "codex" {
+            switch session.phase {
+            case .processing, .compacting, .waitingForApproval:
+                CodexAnimationIcon(size: 10, isAnimating: true, fallbackColor: codexBlue)
+            case .waitingForInput:
+                ReadyForInputIndicatorIcon(size: 10, color: TerminalColors.green)
+            case .idle, .ended:
+                CodexAnimationIcon(size: 10, isAnimating: false, fallbackColor: codexBlue.opacity(0.45))
+            }
+        } else {
         switch session.phase {
         case .processing, .compacting:
             Text(spinnerSymbols[spinnerPhase % spinnerSymbols.count])
@@ -318,6 +400,17 @@ struct InstanceRow: View {
                 .fill(Color.white.opacity(0.2))
                 .frame(width: 6, height: 6)
         }
+        }
+    }
+
+    private func truncatePreview(_ text: String, maxLength: Int = 42) -> String? {
+        let cleaned = text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\n", with: " ")
+
+        guard !cleaned.isEmpty else { return nil }
+        guard cleaned.count > maxLength else { return cleaned }
+        return String(cleaned.prefix(maxLength - 3)) + "..."
     }
 
 }

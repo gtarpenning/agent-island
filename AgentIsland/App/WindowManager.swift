@@ -1,6 +1,6 @@
 //
 //  WindowManager.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Manages the notch window lifecycle
 //
@@ -9,7 +9,7 @@ import AppKit
 import os.log
 
 /// Logger for window management
-private let logger = Logger(subsystem: "com.claudeisland", category: "Window")
+private let logger = Logger(subsystem: "com.agentisland", category: "Window")
 
 class WindowManager {
     private(set) var windowController: NotchWindowController?

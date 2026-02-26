@@ -1,6 +1,6 @@
 //
 //  NotchViewController.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Hosts the SwiftUI NotchView in AppKit with click-through support
 //

@@ -1,6 +1,6 @@
 //
 //  NotchUserDriver.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Custom Sparkle user driver for in-notch update UI
 //

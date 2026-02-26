@@ -1,6 +1,6 @@
 //
 //  NotchWindowController.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Controls the notch window positioning and lifecycle
 //

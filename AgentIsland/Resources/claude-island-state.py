@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Agent Island Hook
-- Sends session state to ClaudeIsland.app via Unix socket
+Claude Island Hook
+- Sends session state to AgentIsland.app via Unix socket
 - For PermissionRequest: waits for user decision from the app
 """
 import json
@@ -49,6 +49,29 @@ def get_tty():
     return None
 
 
+def get_agent_id(parent_pid):
+    """Infer agent identity from parent process command."""
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["ps", "-p", str(parent_pid), "-o", "comm="],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        command = result.stdout.strip().lower()
+        if "codex" in command:
+            return "codex"
+        if "claude" in command:
+            return "claude"
+    except Exception:
+        pass
+
+    # Keep current behavior as safe default for unknown hooks.
+    return "claude"
+
+
 def send_event(state):
     """Send event to app, return response if any"""
     try:
@@ -85,9 +108,11 @@ def main():
     # Get process info
     claude_pid = os.getppid()
     tty = get_tty()
+    agent_id = get_agent_id(claude_pid)
 
     # Build state object
     state = {
+        "agent_id": agent_id,
         "session_id": session_id,
         "cwd": cwd,
         "event": event,
@@ -150,7 +175,7 @@ def main():
                         "hookEventName": "PermissionRequest",
                         "decision": {
                             "behavior": "deny",
-                            "message": reason or "Denied by user via ClaudeIsland",
+                            "message": reason or "Denied by user via AgentIsland",
                         },
                     }
                 }

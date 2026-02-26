@@ -1,6 +1,6 @@
 //
 //  JSONLInterruptWatcher.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Watches JSONL files for interrupt patterns in real-time
 //  Uses file system events to detect interrupts faster than hook polling
@@ -10,7 +10,7 @@ import Foundation
 import os.log
 
 /// Logger for interrupt watcher
-private let logger = Logger(subsystem: "com.claudeisland", category: "Interrupt")
+private let logger = Logger(subsystem: "com.agentisland", category: "Interrupt")
 
 protocol JSONLInterruptWatcherDelegate: AnyObject {
     func didDetectInterrupt(sessionId: String)
@@ -24,7 +24,7 @@ class JSONLInterruptWatcher {
     private var lastOffset: UInt64 = 0
     private let sessionId: String
     private let filePath: String
-    private let queue = DispatchQueue(label: "com.claudeisland.interruptwatcher", qos: .userInteractive)
+    private let queue = DispatchQueue(label: "com.agentisland.interruptwatcher", qos: .userInteractive)
 
     weak var delegate: JSONLInterruptWatcherDelegate?
 

@@ -1,6 +1,6 @@
 //
 //  EventMonitor.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Wraps NSEvent monitoring for safe lifecycle management
 //

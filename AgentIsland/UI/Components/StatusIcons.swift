@@ -1,6 +1,6 @@
 //
 //  StatusIcons.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Pixel-art status icons for Claude instances
 //

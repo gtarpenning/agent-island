@@ -1,6 +1,6 @@
 //
 //  TerminalVisibilityDetector.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Detects if terminal windows are visible on current space
 //

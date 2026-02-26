@@ -1,6 +1,6 @@
 //
 //  ChatMessage.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Models for conversation messages parsed from JSONL
 //

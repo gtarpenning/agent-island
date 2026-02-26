@@ -1,6 +1,6 @@
 //
 //  TmuxPathFinder.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Finds tmux executable path
 //

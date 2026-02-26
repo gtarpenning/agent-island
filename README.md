@@ -1,41 +1,55 @@
-# Agent Island
+<div align="center">
+  <img src="AgentIsland/Assets.xcassets/AppIcon.appiconset/icon_128x128.png" alt="Logo" width="100" height="100">
+  <h3 align="center">Agent Island</h3>
+  <p align="center">
+    A macOS menu bar app that brings Dynamic Island-style notifications to Claude Code CLI sessions.
+    <br />
+    <br />
+    <a href="https://github.com/farouqaldori/agent-island/releases/latest" target="_blank" rel="noopener noreferrer">
+      <img src="https://img.shields.io/github/v/release/farouqaldori/agent-island?style=rounded&color=white&labelColor=000000&label=release" alt="Release Version" />
+    </a>
+    <a href="#" target="_blank" rel="noopener noreferrer">
+      <img alt="GitHub Downloads" src="https://img.shields.io/github/downloads/farouqaldori/agent-island/total?style=rounded&color=white&labelColor=000000">
+    </a>
+  </p>
+</div>
 
-Agent Island is my fork of the original project.
+## Features
 
-It keeps the notch-style macOS companion workflow and adds support for **Codex** in addition to Claude Code.
+- **Notch UI** — Animated overlay that expands from the MacBook notch
+- **Live Session Monitoring** — Track multiple Claude Code sessions in real-time
+- **Permission Approvals** — Approve or deny tool executions directly from the notch
+- **Chat History** — View full conversation history with markdown rendering
+- **Auto-Setup** — Hooks install automatically on first launch
 
-## Build
+## Requirements
 
-```bash
-xcodebuild -scheme ClaudeIsland -configuration Release build
-```
+- macOS 15.6+
+- Claude Code CLI
 
-## Release DMG + GitHub upload
+## Install
 
-Required:
-
-- `GITHUB_REPO` (format: `owner/repo`)
-- `NOTARY_KEYCHAIN_PROFILE` (unless `SKIP_NOTARIZATION=1`)
-
-Example:
-
-```bash
-GITHUB_REPO=yourname/agent-island \
-NOTARY_KEYCHAIN_PROFILE=ClaudeIsland \
-./scripts/create-release.sh
-```
-
-If the app has not been exported yet:
-
-```bash
-GITHUB_REPO=yourname/agent-island \
-NOTARY_KEYCHAIN_PROFILE=ClaudeIsland \
-BUILD_IF_MISSING=1 \
-./scripts/create-release.sh
-```
-
-For all options:
+Download the latest release or build from source:
 
 ```bash
-./scripts/create-release.sh --help
+xcodebuild -scheme AgentIsland -configuration Release build
 ```
+
+## How It Works
+
+Agent Island installs hooks into `~/.claude/hooks/` that communicate session state via a Unix socket. The app listens for events and displays them in the notch overlay.
+
+When Claude needs permission to run a tool, the notch expands with approve/deny buttons—no need to switch to the terminal.
+
+## Analytics
+
+Agent Island uses Mixpanel to collect anonymous usage data:
+
+- **App Launched** — App version, build number, macOS version
+- **Session Started** — When a new Claude Code session is detected
+
+No personal data or conversation content is collected.
+
+## License
+
+Apache 2.0

@@ -1,6 +1,6 @@
 //
 //  FileSyncScheduler.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Handles debounced file sync scheduling for session JSONL files.
 //  Extracted from SessionStore to reduce complexity.
@@ -12,7 +12,7 @@ import os.log
 /// Manages debounced file sync operations for session data
 actor FileSyncScheduler {
     /// Logger for file sync (nonisolated static for cross-context access)
-    nonisolated static let logger = Logger(subsystem: "com.claudeisland", category: "FileSync")
+    nonisolated static let logger = Logger(subsystem: "com.agentisland", category: "FileSync")
 
     /// Pending sync tasks keyed by sessionId
     private var pendingSyncs: [String: Task<Void, Never>] = [:]

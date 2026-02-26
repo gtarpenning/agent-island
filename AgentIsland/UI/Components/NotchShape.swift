@@ -1,6 +1,6 @@
 //
 //  NotchShape.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Accurate notch shape using quadratic curves
 //

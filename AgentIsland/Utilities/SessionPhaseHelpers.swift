@@ -1,6 +1,6 @@
 //
 //  SessionPhaseHelpers.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Helper functions for session phase display
 //

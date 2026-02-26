@@ -1,6 +1,6 @@
 //
 //  NotchGeometry.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Geometry calculations for the notch
 //

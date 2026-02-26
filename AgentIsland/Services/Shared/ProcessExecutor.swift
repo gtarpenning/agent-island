@@ -1,6 +1,6 @@
 //
 //  ProcessExecutor.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Shared utility for executing shell commands with proper error handling
 //
@@ -48,13 +48,12 @@ protocol ProcessExecuting: Sendable {
 
 /// Default implementation using Foundation.Process
 actor ProcessExecutor: ProcessExecuting {
-    /// Shared instance (nonisolated(unsafe) required for actor init in static context)
-    nonisolated(unsafe) static let shared = ProcessExecutor()
+    static let shared = ProcessExecutor()
 
     /// Logger for process execution (nonisolated static for cross-context access)
-    nonisolated static let logger = Logger(subsystem: "com.claudeisland", category: "ProcessExecutor")
+    nonisolated static let logger = Logger(subsystem: "com.agentisland", category: "ProcessExecutor")
 
-    private init() {}
+    nonisolated private init() {}
 
     /// Run a command asynchronously and return output (throws on failure)
     func run(_ executable: String, arguments: [String]) async throws -> String {

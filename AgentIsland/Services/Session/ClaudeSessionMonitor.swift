@@ -1,6 +1,6 @@
 //
 //  ClaudeSessionMonitor.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  MainActor wrapper around SessionStore for UI binding.
 //  Publishes SessionState arrays for SwiftUI observation.

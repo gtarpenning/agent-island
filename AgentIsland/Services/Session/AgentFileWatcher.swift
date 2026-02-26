@@ -1,6 +1,6 @@
 //
 //  AgentFileWatcher.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Watches agent JSONL files for real-time subagent tool updates.
 //  Each Task tool gets its own watcher for its agent file.
@@ -10,7 +10,7 @@ import Foundation
 import os.log
 
 /// Logger for agent file watcher
-private let logger = Logger(subsystem: "com.claudeisland", category: "AgentFileWatcher")
+private let logger = Logger(subsystem: "com.agentisland", category: "AgentFileWatcher")
 
 /// Protocol for receiving agent file update notifications
 protocol AgentFileWatcherDelegate: AnyObject {
@@ -27,7 +27,7 @@ class AgentFileWatcher {
     private let agentId: String
     private let cwd: String
     private let filePath: String
-    private let queue = DispatchQueue(label: "com.claudeisland.agentfilewatcher", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.agentisland.agentfilewatcher", qos: .userInitiated)
 
     /// Track seen tool IDs to avoid duplicates
     private var seenToolIds: Set<String> = []

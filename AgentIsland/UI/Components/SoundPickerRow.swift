@@ -1,6 +1,6 @@
 //
 //  SoundPickerRow.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Notification sound selection picker for settings menu
 //

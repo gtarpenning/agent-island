@@ -1,6 +1,6 @@
 //
 //  TerminalColors.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Color palette for terminal-style UI
 //

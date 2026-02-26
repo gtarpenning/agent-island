@@ -1,6 +1,6 @@
 //
 //  ToolEventProcessor.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Handles tool and subagent event processing logic.
 //  Extracted from SessionStore to reduce complexity.
@@ -10,7 +10,7 @@ import Foundation
 import os.log
 
 /// Logger for tool events
-private let logger = Logger(subsystem: "com.claudeisland", category: "ToolEvents")
+private let logger = Logger(subsystem: "com.agentisland", category: "ToolEvents")
 
 /// Processes tool-related events and updates session state
 enum ToolEventProcessor {

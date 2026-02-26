@@ -1,6 +1,6 @@
 //
 //  ToolResultViews.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Individual views for rendering each tool's result with proper formatting
 //

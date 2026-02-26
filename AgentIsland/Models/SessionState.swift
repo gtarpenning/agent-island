@@ -1,6 +1,6 @@
 //
 //  SessionState.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Unified state model for a Claude session.
 //  Consolidates all state that was previously spread across multiple components.
@@ -14,6 +14,7 @@ struct SessionState: Equatable, Identifiable, Sendable {
     // MARK: - Identity
 
     let sessionId: String
+    var agentId: String
     let cwd: String
     let projectName: String
 
@@ -66,6 +67,7 @@ struct SessionState: Equatable, Identifiable, Sendable {
 
     nonisolated init(
         sessionId: String,
+        agentId: String = "claude",
         cwd: String,
         projectName: String? = nil,
         pid: Int? = nil,
@@ -84,6 +86,7 @@ struct SessionState: Equatable, Identifiable, Sendable {
         createdAt: Date = Date()
     ) {
         self.sessionId = sessionId
+        self.agentId = agentId
         self.cwd = cwd
         self.projectName = projectName ?? URL(fileURLWithPath: cwd).lastPathComponent
         self.pid = pid

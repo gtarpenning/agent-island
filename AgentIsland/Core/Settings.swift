@@ -1,6 +1,6 @@
 //
 //  Settings.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  App settings manager using UserDefaults
 //
@@ -42,17 +42,36 @@ enum AppSettings {
 
     // MARK: - Notification Sound
 
-    /// The sound to play when Claude finishes and is ready for input
+    /// True when the user has explicitly chosen a notification sound.
+    static var hasCustomNotificationSoundSelection: Bool {
+        defaults.object(forKey: Keys.notificationSound) != nil
+    }
+
+    /// The sound to play when an agent finishes and is ready for input.
+    static func notificationSound(for agentId: String) -> NotificationSound {
+        guard let rawValue = defaults.string(forKey: Keys.notificationSound),
+              let sound = NotificationSound(rawValue: rawValue) else {
+            return defaultNotificationSound(for: agentId)
+        }
+        return sound
+    }
+
+    /// Global picker value used by settings UI (Claude baseline).
     static var notificationSound: NotificationSound {
         get {
-            guard let rawValue = defaults.string(forKey: Keys.notificationSound),
-                  let sound = NotificationSound(rawValue: rawValue) else {
-                return .pop // Default to Pop
-            }
-            return sound
+            notificationSound(for: "claude")
         }
         set {
             defaults.set(newValue.rawValue, forKey: Keys.notificationSound)
+        }
+    }
+
+    private static func defaultNotificationSound(for agentId: String) -> NotificationSound {
+        switch agentId {
+        case "codex":
+            return .ping
+        default:
+            return .pop
         }
     }
 }

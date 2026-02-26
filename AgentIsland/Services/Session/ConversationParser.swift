@@ -1,6 +1,6 @@
 //
 //  ConversationParser.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Parses Claude JSONL conversation files to extract summary and last message
 //  Optimized for incremental parsing - only reads new lines since last sync
@@ -22,7 +22,7 @@ actor ConversationParser {
     static let shared = ConversationParser()
 
     /// Logger for conversation parser (nonisolated static for cross-context access)
-    nonisolated static let logger = Logger(subsystem: "com.claudeisland", category: "Parser")
+    nonisolated static let logger = Logger(subsystem: "com.agentisland", category: "Parser")
 
     /// Cache of parsed conversation info, keyed by session file path
     private var cache: [String: CachedInfo] = [:]

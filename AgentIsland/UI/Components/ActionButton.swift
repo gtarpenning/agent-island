@@ -1,6 +1,6 @@
 //
 //  ActionButton.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Reusable action button component
 //

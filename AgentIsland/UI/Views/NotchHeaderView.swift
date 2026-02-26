@@ -1,6 +1,6 @@
 //
 //  NotchHeaderView.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Header bar for the dynamic island
 //

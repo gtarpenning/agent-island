@@ -1,6 +1,6 @@
 //
 //  MCPToolFormatter.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Utility for formatting MCP tool names and arguments
 //

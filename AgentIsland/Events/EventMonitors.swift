@@ -1,6 +1,6 @@
 //
 //  EventMonitors.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Singleton that aggregates all event monitors
 //

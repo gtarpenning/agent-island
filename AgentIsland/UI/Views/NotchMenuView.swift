@@ -1,6 +1,6 @@
 //
 //  NotchMenuView.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Minimal menu matching Dynamic Island aesthetic
 //
@@ -20,6 +20,43 @@ struct NotchMenuView: View {
     @ObservedObject private var soundSelector = SoundSelector.shared
     @State private var hooksInstalled: Bool = false
     @State private var launchAtLogin: Bool = false
+    @ObservedObject private var agentRegistry = AgentRegistry.shared
+
+
+    @ViewBuilder
+    private var agentsSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("AGENTS")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundColor(.white.opacity(0.3))
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+
+            HStack(spacing: 8) {
+                // Claude toggle
+                AgentToggleChip(
+                    label: "Claude Code",
+                    color: Color(red: 0.85, green: 0.47, blue: 0.34),
+                    isEnabled: agentRegistry.enabledAgentIds.contains("claude"),
+                    onToggle: {
+                        Task { await agentRegistry.toggle(agentId: "claude") }
+                    }
+                )
+
+                // Codex toggle
+                AgentToggleChip(
+                    label: "Codex",
+                    color: Color(red: 0.24, green: 0.52, blue: 0.96),
+                    isEnabled: agentRegistry.enabledAgentIds.contains("codex"),
+                    onToggle: {
+                        Task { await agentRegistry.toggle(agentId: "codex") }
+                    }
+                )
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 4) {
@@ -30,6 +67,12 @@ struct NotchMenuView: View {
             ) {
                 viewModel.toggleMenu()
             }
+
+            Divider()
+                .background(Color.white.opacity(0.08))
+                .padding(.vertical, 4)
+
+            agentsSection
 
             Divider()
                 .background(Color.white.opacity(0.08))
@@ -522,5 +565,36 @@ struct MenuToggleRow: View {
 
     private var textColor: Color {
         .white.opacity(isHovered ? 1.0 : 0.7)
+    }
+}
+
+// MARK: - Agent Toggle Chip
+
+struct AgentToggleChip: View {
+    let label: String
+    let color: Color
+    let isEnabled: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(isEnabled ? color : Color.white.opacity(0.2))
+                    .frame(width: 6, height: 6)
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(isEnabled ? .white : .white.opacity(0.4))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                isEnabled
+                    ? color.opacity(0.15)
+                    : Color.white.opacity(0.06)
+            )
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }

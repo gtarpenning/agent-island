@@ -1,6 +1,6 @@
 //
 //  NotchActivityCoordinator.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Coordinates live activities and expanding views for the notch
 //
@@ -13,6 +13,7 @@ import SwiftUI
 /// Types of activities that can be shown in the notch
 enum NotchActivityType: Equatable {
     case claude      // Claude is processing
+    case codex       // Codex is processing
     case none
 }
 

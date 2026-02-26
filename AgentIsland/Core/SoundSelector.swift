@@ -1,6 +1,6 @@
 //
 //  SoundSelector.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Manages sound selection state for the settings menu
 //

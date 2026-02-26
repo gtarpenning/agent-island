@@ -1,6 +1,6 @@
 //
 //  TmuxTarget.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Data model for tmux session/window/pane targeting
 //

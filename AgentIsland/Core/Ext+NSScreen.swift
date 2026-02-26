@@ -1,6 +1,6 @@
 //
 //  Ext+NSScreen.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Extensions for NSScreen to detect notch and built-in display
 //

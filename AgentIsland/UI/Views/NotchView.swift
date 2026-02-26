@@ -1,6 +1,6 @@
 //
 //  NotchView.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  The main dynamic island SwiftUI view with accurate notch shape
 //
@@ -23,11 +23,17 @@ struct NotchView: View {
     @State private var previousPendingIds: Set<String> = []
     @State private var previousWaitingForInputIds: Set<String> = []
     @State private var waitingForInputTimestamps: [String: Date] = [:]  // sessionId -> when it entered waitingForInput
+    @State private var notifiedAssistantReplySignatureBySessionId: [String: String] = [:]
+    @State private var hasPrimedSoundBaseline = false
+    @State private var waitingForInputSoundTask: Task<Void, Never>?
     @State private var isVisible: Bool = false
     @State private var isHovering: Bool = false
     @State private var isBouncing: Bool = false
 
     @Namespace private var activityNamespace
+    private let claudeOrange = Color(red: 0.85, green: 0.47, blue: 0.34)
+    private let codexBlue = Color(red: 0.24, green: 0.52, blue: 0.96)
+    private let codexGreen = Color(red: 0.06, green: 0.73, blue: 0.51)
 
     /// Whether any Claude session is currently processing or compacting
     private var isAnyProcessing: Bool {
@@ -54,6 +60,54 @@ struct NotchView: View {
         }
     }
 
+    private var hasClaudeSessions: Bool {
+        sessionMonitor.instances.contains { $0.agentId == "claude" }
+    }
+
+    private var hasCodexSessions: Bool {
+        sessionMonitor.instances.contains { $0.agentId == "codex" }
+    }
+
+    private var activeActivitySessions: [SessionState] {
+        sessionMonitor.instances.filter {
+            $0.phase == .processing || $0.phase == .compacting || $0.phase.isWaitingForApproval
+        }
+    }
+
+    private var hasMultipleActiveSessions: Bool {
+        activeActivitySessions.count > 1
+    }
+
+    private var hasBothAgentTypes: Bool {
+        hasClaudeSessions && hasCodexSessions
+    }
+
+    /// Use Codex branding only when Claude is not present.
+    private var isCodexOnly: Bool {
+        hasCodexSessions && !hasClaudeSessions
+    }
+
+    private var activeProcessingType: NotchActivityType {
+        let activeSessions = sessionMonitor.instances.filter {
+            $0.phase == .processing || $0.phase == .compacting || $0.phase.isWaitingForApproval
+        }
+
+        if activeSessions.contains(where: { $0.agentId == "claude" }) {
+            return .claude
+        }
+        if activeSessions.contains(where: { $0.agentId == "codex" }) {
+            return .codex
+        }
+        return isCodexOnly ? .codex : .claude
+    }
+
+    private var usesCodexBranding: Bool {
+        if activityCoordinator.expandingActivity.show {
+            return activityCoordinator.expandingActivity.type == .codex
+        }
+        return isCodexOnly
+    }
+
     // MARK: - Sizing
 
     private var closedNotchSize: CGSize {
@@ -71,7 +125,7 @@ struct NotchView: View {
         // Expand for processing activity
         if activityCoordinator.expandingActivity.show {
             switch activityCoordinator.expandingActivity.type {
-            case .claude:
+            case .claude, .codex:
                 let baseWidth = 2 * max(0, closedNotchSize.height - 12) + 20
                 return baseWidth + permissionIndicatorWidth
             case .none:
@@ -205,12 +259,16 @@ struct NotchView: View {
             handleProcessingChange()
             handleWaitingForInputChange(instances)
         }
+        .onDisappear {
+            waitingForInputSoundTask?.cancel()
+            waitingForInputSoundTask = nil
+        }
     }
 
     // MARK: - Notch Layout
 
     private var isProcessing: Bool {
-        activityCoordinator.expandingActivity.show && activityCoordinator.expandingActivity.type == .claude
+        activityCoordinator.expandingActivity.show && activityCoordinator.expandingActivity.type != .none
     }
 
     /// Whether to show the expanded closed state (processing, pending permission, or waiting for input)
@@ -249,16 +307,25 @@ struct NotchView: View {
             // Left side - crab + optional permission indicator (visible when processing, pending, or waiting for input)
             if showClosedActivity {
                 HStack(spacing: 4) {
-                    ClaudeCrabIcon(size: 14, animateLegs: isProcessing)
-                        .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: showClosedActivity)
+                    if hasBothAgentTypes {
+                        stackedDualActivityIcon()
+                    } else if usesCodexBranding {
+                        stackedActivityIcon(isCodex: true)
+                    } else {
+                        stackedActivityIcon(isCodex: false)
+                    }
 
                     // Permission indicator only (amber) - waiting for input shows checkmark on right
                     if hasPendingPermission {
-                        PermissionIndicatorIcon(size: 14, color: Color(red: 0.85, green: 0.47, blue: 0.34))
+                        PermissionIndicatorIcon(size: 14, color: claudeOrange)
                             .matchedGeometryEffect(id: "status-indicator", in: activityNamespace, isSource: showClosedActivity)
                     }
                 }
-                .frame(width: viewModel.status == .opened ? nil : sideWidth + (hasPendingPermission ? 18 : 0))
+                .frame(
+                    width: viewModel.status == .opened
+                        ? nil
+                        : sideWidth + (hasPendingPermission ? 18 : 0) + (hasMultipleActiveSessions ? 8 : 0)
+                )
                 .padding(.leading, viewModel.status == .opened ? 8 : 0)
             }
 
@@ -281,7 +348,7 @@ struct NotchView: View {
             // Right side - spinner when processing/pending, checkmark when waiting for input
             if showClosedActivity {
                 if isProcessing || hasPendingPermission {
-                    ProcessingSpinner()
+                    ProcessingSpinner(color: usesCodexBranding ? codexGreen : claudeOrange)
                         .matchedGeometryEffect(id: "spinner", in: activityNamespace, isSource: showClosedActivity)
                         .frame(width: viewModel.status == .opened ? 20 : sideWidth)
                 } else if hasWaitingForInput {
@@ -299,6 +366,66 @@ struct NotchView: View {
         max(0, closedNotchSize.height - 12) + 10
     }
 
+    @ViewBuilder
+    private func stackedActivityIcon(isCodex: Bool) -> some View {
+        ZStack {
+            if hasMultipleActiveSessions {
+                if isCodex {
+                    CodexAnimationIcon(size: 14, isAnimating: isProcessing, fallbackColor: codexBlue)
+                        .opacity(0.6)
+                        .offset(x: 9, y: 0)
+                } else {
+                    ClaudeCrabIcon(size: 14, animateLegs: isProcessing)
+                        .opacity(0.6)
+                        .offset(x: 7, y: 1)
+                }
+            }
+
+            if isCodex {
+                ZStack {
+                    CodexAnimationIcon(size: 15, isAnimating: isProcessing, fallbackColor: .black)
+                    CodexAnimationIcon(size: 14, isAnimating: isProcessing, fallbackColor: codexBlue)
+                        .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: showClosedActivity)
+                }
+            } else {
+                ZStack {
+                    ClaudeCrabIcon(size: 15, color: .black, animateLegs: isProcessing)
+                    ClaudeCrabIcon(size: 14, animateLegs: isProcessing)
+                        .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: showClosedActivity)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func stackedDualActivityIcon() -> some View {
+        if usesCodexBranding {
+            ZStack {
+                ClaudeCrabIcon(size: 14, animateLegs: isProcessing)
+                    .opacity(0.6)
+                    .offset(x: 7, y: 1)
+
+                ZStack {
+                    CodexAnimationIcon(size: 15, isAnimating: isProcessing, fallbackColor: .black)
+                    CodexAnimationIcon(size: 14, isAnimating: isProcessing, fallbackColor: codexBlue)
+                        .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: showClosedActivity)
+                }
+            }
+        } else {
+            ZStack {
+                CodexAnimationIcon(size: 14, isAnimating: isProcessing, fallbackColor: codexBlue)
+                    .opacity(0.6)
+                    .offset(x: 9, y: 0)
+
+                ZStack {
+                    ClaudeCrabIcon(size: 15, color: .black, animateLegs: isProcessing)
+                    ClaudeCrabIcon(size: 14, animateLegs: isProcessing)
+                        .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: showClosedActivity)
+                }
+            }
+        }
+    }
+
     // MARK: - Opened Header Content
 
     @ViewBuilder
@@ -307,9 +434,38 @@ struct NotchView: View {
             // Show static crab only if not showing activity in headerRow
             // (headerRow handles crab + indicator when showClosedActivity is true)
             if !showClosedActivity {
-                ClaudeCrabIcon(size: 14)
-                    .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: !showClosedActivity)
+                if hasBothAgentTypes {
+                    ZStack {
+                        if isCodexOnly {
+                            ClaudeCrabIcon(size: 14)
+                                .opacity(0.6)
+                                .offset(x: 7, y: 1)
+
+                            ZStack {
+                                CodexAnimationIcon(size: 15, isAnimating: false, fallbackColor: .black)
+                                CodexAnimationIcon(size: 14, isAnimating: false, fallbackColor: codexBlue)
+                            }
+                        } else {
+                            CodexAnimationIcon(size: 14, isAnimating: false, fallbackColor: codexBlue)
+                                .opacity(0.6)
+                                .offset(x: 9, y: 0)
+
+                            ZStack {
+                                ClaudeCrabIcon(size: 15, color: .black)
+                                ClaudeCrabIcon(size: 14)
+                            }
+                        }
+                    }
                     .padding(.leading, 8)
+                } else if isCodexOnly {
+                    CodexAnimationIcon(size: 14, isAnimating: false, fallbackColor: codexBlue)
+                        .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: !showClosedActivity)
+                        .padding(.leading, 8)
+                } else {
+                    ClaudeCrabIcon(size: 14)
+                        .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: !showClosedActivity)
+                        .padding(.leading, 8)
+                }
             }
 
             Spacer()
@@ -373,8 +529,8 @@ struct NotchView: View {
 
     private func handleProcessingChange() {
         if isAnyProcessing || hasPendingPermission {
-            // Show claude activity when processing or waiting for permission
-            activityCoordinator.showActivity(type: .claude)
+            // Show activity matching the active agent.
+            activityCoordinator.showActivity(type: activeProcessingType)
             isVisible = true
         } else if hasWaitingForInput {
             // Keep visible for waiting-for-input but hide the processing spinner
@@ -403,6 +559,8 @@ struct NotchView: View {
             // Clear waiting-for-input timestamps only when manually opened (user acknowledged)
             if viewModel.openReason == .click || viewModel.openReason == .hover {
                 waitingForInputTimestamps.removeAll()
+                waitingForInputSoundTask?.cancel()
+                waitingForInputSoundTask = nil
             }
         case .closed:
             // Don't hide on non-notched devices - users need a visible target
@@ -446,24 +604,39 @@ struct NotchView: View {
             waitingForInputTimestamps.removeValue(forKey: staleId)
         }
 
-        // Bounce the notch when a session newly enters waitingForInput state
-        if !newWaitingIds.isEmpty {
-            // Get the sessions that just entered waitingForInput
-            let newlyWaitingSessions = waitingForInputSessions.filter { newWaitingIds.contains($0.stableId) }
-
-            // Play notification sound if the session is not actively focused
-            if let soundName = AppSettings.notificationSound.soundName {
-                // Check if we should play sound (async check for tmux pane focus)
-                Task {
-                    let shouldPlaySound = await shouldPlayNotificationSound(for: newlyWaitingSessions)
-                    if shouldPlaySound {
-                        await MainActor.run {
-                            NSSound(named: soundName)?.play()
-                        }
-                    }
+        // Prime baseline once to avoid alerting for sessions that were already waiting
+        // when the UI first subscribed.
+        if !hasPrimedSoundBaseline {
+            for session in waitingForInputSessions {
+                if let signature = assistantReplySignature(for: session) {
+                    notifiedAssistantReplySignatureBySessionId[session.sessionId] = signature
                 }
             }
+            hasPrimedSoundBaseline = true
+            previousWaitingForInputIds = currentIds
+            return
+        }
 
+        let activeSessionIds = Set(instances.map(\.sessionId))
+        notifiedAssistantReplySignatureBySessionId = notifiedAssistantReplySignatureBySessionId.filter { activeSessionIds.contains($0.key) }
+
+        let sessionsEligibleForSound = waitingForInputSessions.filter { session in
+            guard let signature = assistantReplySignature(for: session) else { return false }
+            return notifiedAssistantReplySignatureBySessionId[session.sessionId] != signature
+        }
+
+        for session in sessionsEligibleForSound {
+            if let signature = assistantReplySignature(for: session) {
+                notifiedAssistantReplySignatureBySessionId[session.sessionId] = signature
+            }
+        }
+
+        if !sessionsEligibleForSound.isEmpty {
+            scheduleWaitingForInputSound(for: sessionsEligibleForSound)
+        }
+
+        // Bounce the notch when a session newly enters waitingForInput state
+        if !newWaitingIds.isEmpty {
             // Trigger bounce animation to get user's attention
             DispatchQueue.main.async {
                 isBouncing = true
@@ -481,6 +654,67 @@ struct NotchView: View {
         }
 
         previousWaitingForInputIds = currentIds
+    }
+
+    private func scheduleWaitingForInputSound(for sessions: [SessionState]) {
+        waitingForInputSoundTask?.cancel()
+
+        if AppSettings.hasCustomNotificationSoundSelection,
+           AppSettings.notificationSound.soundName == nil {
+            return
+        }
+
+        waitingForInputSoundTask = Task {
+            guard !Task.isCancelled else { return }
+
+            let sessionsToCheck = sessions.filter { $0.phase == .waitingForInput }
+            guard !sessionsToCheck.isEmpty else { return }
+
+            let shouldPlaySound = await shouldPlayNotificationSound(for: sessionsToCheck)
+            guard shouldPlaySound else { return }
+
+            let sound = notificationSound(for: sessionsToCheck)
+            guard let soundName = sound.soundName else { return }
+
+            await MainActor.run {
+                _ = NSSound(named: soundName)?.play()
+            }
+        }
+    }
+
+    private func assistantReplySignature(for session: SessionState) -> String? {
+        for item in session.chatItems.reversed() {
+            guard case .assistant(let text) = item.type else { continue }
+            if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                continue
+            }
+            return "item:\(item.id)"
+        }
+
+        guard session.lastMessageRole == "assistant",
+              let lastMessage = session.lastMessage?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !lastMessage.isEmpty else {
+            return nil
+        }
+
+        if let lastUserDate = session.lastUserMessageDate {
+            return "conv:\(lastUserDate.timeIntervalSince1970):\(lastMessage)"
+        }
+        return "conv:\(lastMessage)"
+    }
+
+    private func notificationSound(for sessions: [SessionState]) -> NotificationSound {
+        if AppSettings.hasCustomNotificationSoundSelection {
+            return AppSettings.notificationSound
+        }
+
+        if sessions.contains(where: { $0.agentId == "codex" }) {
+            return AppSettings.notificationSound(for: "codex")
+        }
+        if let firstSession = sessions.first {
+            return AppSettings.notificationSound(for: firstSession.agentId)
+        }
+        return AppSettings.notificationSound(for: "claude")
     }
 
     /// Determine if notification sound should play for the given sessions

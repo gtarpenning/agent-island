@@ -1,6 +1,6 @@
 //
 //  ChatHistoryManager.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 
 import Combine

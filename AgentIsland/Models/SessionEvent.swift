@@ -1,6 +1,6 @@
 //
 //  SessionEvent.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Unified event types for the session state machine.
 //  All state changes flow through SessionStore.process(event).

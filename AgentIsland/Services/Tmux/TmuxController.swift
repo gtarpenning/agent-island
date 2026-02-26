@@ -1,6 +1,6 @@
 //
 //  TmuxController.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  High-level tmux operations controller
 //

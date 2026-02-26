@@ -1,6 +1,6 @@
 //
 //  NotchViewModel.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  State management for the dynamic island
 //

@@ -1,6 +1,6 @@
 //
 //  SessionPhase.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Explicit state machine for Claude session lifecycle.
 //  All state transitions are validated before being applied.

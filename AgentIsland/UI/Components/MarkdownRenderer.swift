@@ -1,6 +1,6 @@
 //
 //  MarkdownRenderer.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Markdown renderer using swift-markdown for efficient parsing
 //

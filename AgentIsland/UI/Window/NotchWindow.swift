@@ -1,6 +1,6 @@
 //
 //  NotchWindow.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Transparent window that overlays the notch area
 //  Following NotchDrop's approach: window ignores mouse events,

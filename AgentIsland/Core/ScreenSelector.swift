@@ -1,6 +1,6 @@
 //
 //  ScreenSelector.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Manages screen selection state and persistence
 //

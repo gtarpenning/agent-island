@@ -1,6 +1,6 @@
 //
 //  TmuxTargetFinder.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Finds tmux targets for Claude processes
 //

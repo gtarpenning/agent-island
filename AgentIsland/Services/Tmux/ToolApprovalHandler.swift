@@ -1,6 +1,6 @@
 //
 //  ToolApprovalHandler.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Handles Claude tool approval operations via tmux
 //
@@ -13,7 +13,7 @@ actor ToolApprovalHandler {
     static let shared = ToolApprovalHandler()
 
     /// Logger for tool approval (nonisolated static for cross-context access)
-    nonisolated static let logger = Logger(subsystem: "com.claudeisland", category: "Approval")
+    nonisolated static let logger = Logger(subsystem: "com.agentisland", category: "Approval")
 
     private init() {}
 

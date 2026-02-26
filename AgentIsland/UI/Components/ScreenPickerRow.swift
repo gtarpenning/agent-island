@@ -1,6 +1,6 @@
 //
 //  ScreenPickerRow.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Screen selection picker for settings menu
 //

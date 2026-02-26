@@ -1,6 +1,6 @@
 //
 //  YabaiController.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  High-level yabai window management controller
 //

@@ -1,6 +1,6 @@
 //
 //  SessionStore.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Central state manager for all Claude sessions.
 //  Single source of truth - all state mutations flow through process().
@@ -8,6 +8,7 @@
 
 import Combine
 import Foundation
+import Mixpanel
 import os.log
 
 /// Central state manager for all Claude sessions
@@ -16,7 +17,7 @@ actor SessionStore {
     static let shared = SessionStore()
 
     /// Logger for session store (nonisolated static for cross-context access)
-    nonisolated static let logger = Logger(subsystem: "com.claudeisland", category: "Session")
+    nonisolated static let logger = Logger(subsystem: "com.agentisland", category: "Session")
 
     // MARK: - State
 
@@ -116,11 +117,25 @@ actor SessionStore {
 
     private func processHookEvent(_ event: HookEvent) async {
         let sessionId = event.sessionId
-        var session = sessions[sessionId] ?? createSession(from: event)
+        let isNewSession = sessions[sessionId] == nil
+        let processTree = event.pid.map { _ in ProcessTreeBuilder.shared.buildTree() }
+        let detectedAgentId = detectAgentId(for: event, tree: processTree)
+        var session = sessions[sessionId] ?? createSession(from: event, agentId: detectedAgentId ?? "claude")
+
+        // Track new session in Mixpanel
+        if isNewSession {
+            Mixpanel.mainInstance().track(event: "Session Started")
+        }
+
+        if let detectedAgentId,
+           session.agentId != detectedAgentId {
+            Self.logger.info("Session \(sessionId.prefix(8), privacy: .public) agent updated: \(session.agentId, privacy: .public) -> \(detectedAgentId, privacy: .public)")
+            session.agentId = detectedAgentId
+        }
 
         session.pid = event.pid
-        if let pid = event.pid {
-            let tree = ProcessTreeBuilder.shared.buildTree()
+        if let pid = event.pid,
+           let tree = processTree {
             session.isInTmux = ProcessTreeBuilder.shared.isInTmux(pid: pid, tree: tree)
         }
         if let tty = event.tty {
@@ -150,7 +165,36 @@ actor SessionStore {
         processToolTracking(event: event, session: &session)
         processSubagentTracking(event: event, session: &session)
 
+        if event.event == "Notification",
+           let message = event.message,
+           !message.isEmpty {
+            session.conversationInfo = ConversationInfo(
+                summary: session.conversationInfo.summary,
+                lastMessage: message,
+                lastMessageRole: "assistant",
+                lastToolName: session.conversationInfo.lastToolName,
+                firstUserMessage: session.conversationInfo.firstUserMessage,
+                lastUserMessageDate: session.conversationInfo.lastUserMessageDate
+            )
+            if session.agentId == "codex" {
+                appendAssistantHookMessage(to: &session, text: message, eventName: event.event)
+            }
+        }
+
         if event.event == "Stop" {
+            if let message = event.message, !message.isEmpty {
+                session.conversationInfo = ConversationInfo(
+                    summary: session.conversationInfo.summary,
+                    lastMessage: message,
+                    lastMessageRole: "assistant",
+                    lastToolName: session.conversationInfo.lastToolName,
+                    firstUserMessage: session.conversationInfo.firstUserMessage,
+                    lastUserMessageDate: session.conversationInfo.lastUserMessageDate
+                )
+                if session.agentId == "codex" {
+                    appendAssistantHookMessage(to: &session, text: message, eventName: event.event)
+                }
+            }
             session.subagentState = SubagentState()
         }
 
@@ -162,9 +206,10 @@ actor SessionStore {
         }
     }
 
-    private func createSession(from event: HookEvent) -> SessionState {
+    private func createSession(from event: HookEvent, agentId: String) -> SessionState {
         SessionState(
             sessionId: event.sessionId,
+            agentId: agentId,
             cwd: event.cwd,
             projectName: URL(fileURLWithPath: event.cwd).lastPathComponent,
             pid: event.pid,
@@ -172,6 +217,68 @@ actor SessionStore {
             isInTmux: false,  // Will be updated
             phase: .idle
         )
+    }
+
+    private func detectAgentId(for event: HookEvent, tree: [Int: ProcessInfo]?) -> String? {
+        if let explicit = normalizedAgentId(event.agentId) {
+            return explicit
+        }
+
+        guard let pid = event.pid,
+              let tree else {
+            return nil
+        }
+        return inferAgentId(fromPid: pid, tree: tree)
+    }
+
+    private func normalizedAgentId(_ agentId: String?) -> String? {
+        guard let agentId else { return nil }
+        let trimmed = agentId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return trimmed
+    }
+
+    private func inferAgentId(fromPid pid: Int, tree: [Int: ProcessInfo]) -> String? {
+        var currentPid = pid
+        var depth = 0
+
+        while currentPid > 1, depth < 20 {
+            guard let info = tree[currentPid] else { break }
+            if let inferred = inferAgentId(fromCommand: info.command) {
+                return inferred
+            }
+            currentPid = info.ppid
+            depth += 1
+        }
+
+        return nil
+    }
+
+    private func inferAgentId(fromCommand command: String) -> String? {
+        let lower = command.lowercased()
+        if lower.contains("codex") {
+            return "codex"
+        }
+        if lower.contains("claude") {
+            return "claude"
+        }
+        return nil
+    }
+
+    private func appendAssistantHookMessage(to session: inout SessionState, text: String, eventName: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        if let last = session.chatItems.last, case .assistant(let existing) = last.type, existing == trimmed {
+            return
+        }
+
+        let item = ChatHistoryItem(
+            id: "hook-\(eventName.lowercased())-\(UUID().uuidString)",
+            type: .assistant(trimmed),
+            timestamp: Date()
+        )
+        session.chatItems.append(item)
     }
 
     private func processToolTracking(event: HookEvent, session: inout SessionState) {

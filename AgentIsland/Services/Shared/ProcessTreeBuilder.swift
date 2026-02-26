@@ -1,6 +1,6 @@
 //
 //  ProcessTreeBuilder.swift
-//  ClaudeIsland
+//  AgentIsland
 //
 //  Builds and queries process trees using ps command
 //
