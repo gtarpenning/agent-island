@@ -19,6 +19,8 @@ WEBSITE_PUBLIC="$WEBSITE_DIR/public"
 APP_PATH="$EXPORT_PATH/Agent Island.app"
 APP_NAME="AgentIsland"
 KEYCHAIN_PROFILE="AgentIsland"
+ALLOW_UNSIGNED_RELEASE="${ALLOW_UNSIGNED_RELEASE:-0}"
+AUTO_PUSH_WEBSITE="${AUTO_PUSH_WEBSITE:-0}"
 
 echo "=== Creating Release ==="
 echo ""
@@ -46,23 +48,27 @@ echo "=== Step 1: Notarizing ==="
 
 # Check if keychain profile exists
 if ! xcrun notarytool history --keychain-profile "$KEYCHAIN_PROFILE" &>/dev/null; then
-    echo ""
-    echo "No keychain profile found. Set up credentials with:"
-    echo ""
-    echo "  xcrun notarytool store-credentials \"$KEYCHAIN_PROFILE\" \\"
-    echo "      --apple-id \"your@email.com\" \\"
-    echo "      --team-id \"2DKS5U9LV4\" \\"
-    echo "      --password \"xxxx-xxxx-xxxx-xxxx\""
-    echo ""
-    echo "Create an app-specific password at: https://appleid.apple.com"
-    echo ""
-    read -p "Skip notarization for now? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    if [ "$ALLOW_UNSIGNED_RELEASE" = "1" ]; then
+        echo ""
+        echo "WARNING: No keychain profile '$KEYCHAIN_PROFILE' found."
+        echo "Skipping notarization because ALLOW_UNSIGNED_RELEASE=1."
+        echo "Users will see Gatekeeper warnings."
+        SKIP_NOTARIZATION=true
+    else
+        echo ""
+        echo "ERROR: No keychain profile '$KEYCHAIN_PROFILE' found."
+        echo "Set up credentials with:"
+        echo ""
+        echo "  xcrun notarytool store-credentials \"$KEYCHAIN_PROFILE\" \\"
+        echo "      --apple-id \"your@email.com\" \\"
+        echo "      --team-id \"2DKS5U9LV4\" \\"
+        echo "      --password \"xxxx-xxxx-xxxx-xxxx\""
+        echo ""
+        echo "Create an app-specific password at: https://appleid.apple.com"
+        echo ""
+        echo "Or re-run with ALLOW_UNSIGNED_RELEASE=1 to skip notarization."
         exit 1
     fi
-    SKIP_NOTARIZATION=true
-    echo "WARNING: Skipping notarization. Users will see Gatekeeper warnings!"
 else
     # Create zip for notarization
     ZIP_PATH="$BUILD_DIR/$APP_NAME-$VERSION.zip"
@@ -268,13 +274,18 @@ EOF
             git commit -m "Update appcast for v$VERSION"
             echo "Committed appcast update"
 
-            read -p "Push website changes to deploy? (Y/n) " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            if [ "$AUTO_PUSH_WEBSITE" = "1" ]; then
                 git push
                 echo "Website deployed!"
             else
-                echo "Changes committed but not pushed. Run 'git push' in $WEBSITE_DIR to deploy."
+                read -p "Push website changes to deploy? (Y/n) " -n 1 -r
+                echo
+                if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+                    git push
+                    echo "Website deployed!"
+                else
+                    echo "Changes committed but not pushed. Run 'git push' in $WEBSITE_DIR to deploy."
+                fi
             fi
         else
             echo "No changes to commit"
