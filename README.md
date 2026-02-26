@@ -22,11 +22,6 @@
 - **Chat History** — View full conversation history with markdown rendering
 - **Auto-Setup** — Hooks install automatically on first launch
 
-## Requirements
-
-- macOS 15.6+
-- Claude Code CLI
-
 ## Install
 
 Download the latest release or build from source:
