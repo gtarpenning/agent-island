@@ -311,7 +311,7 @@
   .notch-stage {
     margin-top: 72px;
     width: 100%;
-    max-width: 700px;
+    max-width: 620px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -319,275 +319,348 @@
     position: relative;
   }
 
-  /* Glow behind notch */
+  /* Glow behind panel */
   .notch-glow {
     position: absolute;
-    width: 400px; height: 120px;
-    background: radial-gradient(ellipse, rgba(124,106,247,0.3) 0%, rgba(212,118,58,0.15) 40%, transparent 70%);
-    top: 50%; left: 50%;
+    width: 500px; height: 300px;
+    background: radial-gradient(ellipse, rgba(124,106,247,0.18) 0%, rgba(212,118,58,0.08) 50%, transparent 75%);
+    top: 40%; left: 50%;
     transform: translate(-50%, -50%);
-    filter: blur(20px);
-    animation: glow-breathe 3s ease-in-out infinite;
+    filter: blur(40px);
+    pointer-events: none;
+    animation: glow-breathe 4s ease-in-out infinite;
   }
 
   @keyframes glow-breathe {
     0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
-    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
   }
 
-  /* Mac bar top */
+  /* Mac menubar */
   .mac-bar {
     width: 100%;
     height: 28px;
-    background: linear-gradient(to bottom, #1c1c28, #16161f);
-    border-radius: 16px 16px 0 0;
-    border: 1px solid var(--border);
+    background: #111118;
+    border-radius: 14px 14px 0 0;
+    border: 1px solid rgba(255,255,255,0.08);
     border-bottom: none;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    padding: 0 16px;
     position: relative;
     z-index: 2;
   }
 
-  /* The notch itself */
-  .notch {
+  .mac-bar-left, .mac-bar-right {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* The notch cutout in the bar */
+  .mac-notch-cutout {
     position: absolute;
     top: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 160px;
+    width: 140px;
     height: 28px;
-    background: #07070b;
-    border-radius: 0 0 18px 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
-                height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-    z-index: 10;
-    cursor: pointer;
+    background: var(--bg);
+    border-radius: 0 0 20px 20px;
+    z-index: 3;
   }
 
-  .notch.expanded {
-    width: 340px;
-    height: 80px;
-    border-radius: 0 0 28px 28px;
-  }
-
-  .notch-collapsed-content {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    opacity: 1;
-    transition: opacity 0.2s;
-  }
-
-  .notch.expanded .notch-collapsed-content {
-    opacity: 0;
-    pointer-events: none;
-    position: absolute;
-  }
-
-  .notch-indicator {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--claude);
-    box-shadow: 0 0 8px var(--glow-claude);
-    animation: blink 1.8s ease-in-out infinite;
-  }
-
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
-
-  .notch-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: rgba(255,255,255,0.5);
-    letter-spacing: 0.05em;
-  }
-
-  .notch-expanded-content {
-    position: absolute;
+  /* Panel that drops from the notch */
+  .notch-panel {
     width: 100%;
-    height: 100%;
-    opacity: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 10px 18px;
-    gap: 6px;
-    transition: opacity 0.25s 0.2s;
-    pointer-events: none;
-  }
-
-  .notch.expanded .notch-expanded-content {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .notch-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .notch-session-name {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: rgba(255,255,255,0.8);
-    letter-spacing: 0.03em;
-  }
-
-  .notch-status {
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    color: var(--claude);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .notch-status::before {
-    content: '';
-    width: 4px; height: 4px;
-    border-radius: 50%;
-    background: currentColor;
-    box-shadow: 0 0 5px currentColor;
-  }
-
-  .notch-tool {
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    color: rgba(255,255,255,0.4);
-    background: rgba(255,255,255,0.06);
-    padding: 2px 8px;
-    border-radius: 4px;
+    background: #000;
     border: 1px solid rgba(255,255,255,0.08);
-  }
-
-  .notch-approve-row {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
-
-  .notch-btn {
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    padding: 3px 10px;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-    letter-spacing: 0.04em;
-    font-weight: 500;
-  }
-
-  .notch-btn-allow {
-    background: rgba(16,185,129,0.25);
-    color: #34d399;
-    border: 1px solid rgba(16,185,129,0.3);
-  }
-
-  .notch-btn-deny {
-    background: rgba(239,68,68,0.15);
-    color: #f87171;
-    border: 1px solid rgba(239,68,68,0.2);
-  }
-
-  /* Mac screen below notch bar */
-  .mac-screen {
-    width: 100%;
-    height: 280px;
-    background: linear-gradient(160deg, #0f0f18 0%, #0a0a12 100%);
-    border: 1px solid var(--border);
     border-top: none;
-    border-radius: 0 0 16px 16px;
+    border-radius: 0 0 24px 24px;
     overflow: hidden;
     position: relative;
     z-index: 2;
+    box-shadow:
+      0 40px 80px rgba(0,0,0,0.8),
+      0 0 0 1px rgba(255,255,255,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+    /* Fixed height so view transitions don't shift page layout */
+    height: 320px;
     display: flex;
+    flex-direction: column;
   }
 
-  /* Terminal pane */
-  .terminal-pane {
+  /* Views fill the panel, positioned to not affect outer height */
+  #listView, #detailView {
     flex: 1;
-    padding: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The accent line stays pinned at the bottom */
+  .panel-accent-line {
+    flex-shrink: 0;
+  }
+
+  /* Panel top bar (inside the panel) */
+  .panel-topbar {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+  }
+
+  .panel-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .panel-app-icon {
+    width: 26px; height: 26px;
+    image-rendering: pixelated;
+    opacity: 0.9;
+  }
+
+  .panel-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: -0.01em;
+  }
+
+  .panel-back-btn svg { color: rgba(255,255,255,0.5); }
+
+  .panel-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .panel-icon-btn {
+    color: rgba(255,255,255,0.4);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s;
+  }
+
+  .panel-icon-btn:hover { color: rgba(255,255,255,0.7); }
+  .panel-icon-btn.green { color: #4ade80; }
+
+  /* Session list view */
+  .panel-view {
+    transition: opacity 0.4s ease;
+  }
+
+  .panel-view.hidden {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 48px;
+    width: 100%;
+  }
+
+  .session-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+
+  .session-row:hover { background: rgba(255,255,255,0.03); }
+  .session-row:last-child { border-bottom: none; }
+
+  .session-row-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .session-row-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .session-row-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.92);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .session-row-hash {
     font-family: 'DM Mono', monospace;
     font-size: 11px;
-    line-height: 1.8;
+    font-weight: 400;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 0.02em;
   }
 
-  .t-prompt { color: var(--text-dim); }
-  .t-cmd { color: var(--text); }
-  .t-output { color: var(--text-muted); }
-  .t-tool { color: var(--claude); }
-  .t-cursor {
-    display: inline-block;
-    width: 7px; height: 13px;
-    background: var(--accent2);
-    vertical-align: middle;
-    animation: cursor-blink 1s step-end infinite;
+  .session-row-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  @keyframes cursor-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-  /* Sidebar */
-  .sidebar-pane {
-    width: 180px;
-    border-left: 1px solid var(--border);
-    padding: 16px 14px;
+  .session-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .row-action-icon {
+    color: rgba(255,255,255,0.25);
+    cursor: pointer;
+    transition: color 0.15s;
+    display: flex;
+  }
+
+  .row-action-icon:hover { color: rgba(255,255,255,0.55); }
+
+  .session-status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .dot-processing {
+    background: rgba(255,255,255,0.0);
+    /* replaced by icon */
+  }
+
+  .dot-done {
+    background: #4ade80;
+    box-shadow: 0 0 6px rgba(74,222,128,0.6);
+  }
+
+  /* Detail view */
+  .panel-detail-body {
+    padding: 0;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 8px;
   }
 
-  .sidebar-title {
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    color: var(--text-dim);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 4px;
-  }
+  .detail-spacer { flex: 1; }
 
-  .session-item {
-    padding: 7px 10px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid var(--border);
-    border-radius: 6px;
+  .detail-steps {
+    padding: 20px 20px 16px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    transition: border-color 0.2s;
+    gap: 10px;
   }
 
-  .session-item.active {
-    border-color: rgba(212,118,58,0.3);
-    background: rgba(212,118,58,0.05);
-  }
-
-  .session-item.codex-active {
-    border-color: rgba(16,185,129,0.3);
-    background: rgba(16,185,129,0.05);
-  }
-
-  .session-name {
+  .detail-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: var(--text);
+    font-size: 13px;
+    color: rgba(255,255,255,0.75);
   }
 
-  .session-type {
+  .detail-step-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .detail-step-dot.green { background: #4ade80; box-shadow: 0 0 6px rgba(74,222,128,0.5); }
+  .detail-step-dot.gray { background: rgba(255,255,255,0.25); }
+
+  .detail-step-label { font-weight: 600; }
+  .detail-step-sublabel { color: rgba(255,255,255,0.4); }
+
+  .detail-message-bubble {
+    margin: 0 20px 16px;
+    padding: 12px 18px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 20px 20px 4px 20px;
     font-family: 'DM Mono', monospace;
-    font-size: 9px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    align-self: flex-end;
   }
 
-  .session-type.claude { color: var(--claude); }
-  .session-type.codex { color: var(--codex); }
+  .detail-input-bar {
+    margin: 0 16px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 100px;
+    padding: 10px 10px 10px 18px;
+  }
+
+  .detail-input-text {
+    flex: 1;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.25);
+    letter-spacing: 0.01em;
+  }
+
+  .detail-send-btn {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.5);
+    flex-shrink: 0;
+  }
+
+  /* Bottom gradient accent line */
+  .panel-accent-line {
+    height: 3px;
+    background: linear-gradient(to right, rgba(212,118,58,0.8), rgba(124,106,247,0.8), rgba(212,118,58,0.0));
+    border-radius: 0 0 24px 24px;
+  }
+
+  /* Pixel art icon via canvas/CSS */
+  .pixel-icon {
+    width: 26px; height: 26px;
+    image-rendering: pixelated;
+    font-size: 18px;
+    line-height: 26px;
+    text-align: center;
+  }
 
   /* ─── SECTIONS ─── */
   section { padding: 100px 48px; }
@@ -981,22 +1054,9 @@
     .cta-section { padding: 80px 24px; }
   }
 
-  /* Hover expand notch on desktop */
-  @media (hover: hover) {
-    .notch:hover {
-      width: 340px;
-      height: 80px;
-      border-radius: 0 0 28px 28px;
-    }
-    .notch:hover .notch-collapsed-content {
-      opacity: 0;
-      pointer-events: none;
-      position: absolute;
-    }
-    .notch:hover .notch-expanded-content {
-      opacity: 1;
-      pointer-events: auto;
-    }
+  /* Panel detail view hidden state */
+  .panel-detail-view {
+    transition: opacity 0.4s ease;
   }
 </style>
 </head>
@@ -1042,51 +1102,135 @@
   <!-- NOTCH DEMO -->
   <div class="notch-stage">
     <div class="notch-glow"></div>
+
+    <!-- macOS menu bar with notch cutout -->
     <div class="mac-bar">
-      <div class="notch" id="notchDemo">
-        <div class="notch-collapsed-content">
-          <div class="notch-indicator"></div>
-          <span class="notch-label">2 sessions</span>
-        </div>
-        <div class="notch-expanded-content">
-          <div class="notch-row">
-            <span class="notch-session-name">auth-refactor</span>
-            <span class="notch-status">running</span>
+      <div class="mac-bar-left">
+        <span>9:41</span>
+      </div>
+      <!-- Notch cutout in center -->
+      <div class="mac-notch-cutout"></div>
+      <div class="mac-bar-right">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M1 6l5 6 5-6h4l5 6 5-6h-2l-3 4-3-4H8L5 10 2 6H1z" opacity=".5"/><path d="M3 10l4 4 4-4h-2L7 12 5 10H3z"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="11" rx="2"/><path d="M22 11h1a1 1 0 010 2h-1"/></svg>
+      </div>
+    </div>
+
+    <!-- Panel that drops from notch -->
+    <div class="notch-panel" id="notchPanel">
+
+      <!-- LIST VIEW -->
+      <div id="listView">
+        <!-- Panel top bar: list view -->
+        <div class="panel-topbar">
+          <div class="panel-topbar-left">
+            <!-- Pixel art icon approximation -->
+            <span class="pixel-icon">🎮</span>
           </div>
-          <div class="notch-row">
-            <span class="notch-tool">Bash: npm run test</span>
-            <div class="notch-approve-row">
-              <button class="notch-btn notch-btn-allow">Allow</button>
-              <button class="notch-btn notch-btn-deny">Deny</button>
+          <div class="panel-topbar-right">
+            <!-- hamburger -->
+            <span class="panel-icon-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </span>
+            <!-- status -->
+            <span class="panel-icon-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" opacity=".5"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Session row 1 -->
+        <div class="session-row">
+          <div class="session-row-icon">
+            <!-- Claude icon approximation -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="rgba(212,118,58,0.25)" stroke="rgba(212,118,58,0.5)" stroke-width="1.5"/><path d="M8.5 15.5L12 8.5l3.5 7" stroke="#d4763a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.5 13h5" stroke="#d4763a" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="session-row-body">
+            <div class="session-row-title">
+              agent-island
+              <span class="session-row-hash">#019c97</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="rgba(212,118,58,0.2)" stroke="rgba(212,118,58,0.4)" stroke-width="1.5"/></svg>
+            </div>
+            <div class="session-row-status">Processing...</div>
+          </div>
+          <div class="session-row-actions">
+            <span class="row-action-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Session row 2 -->
+        <div class="session-row">
+          <div style="width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px rgba(74,222,128,0.6);flex-shrink:0;margin-left:12px;"></div>
+          <div class="session-row-body" style="margin-left:6px;">
+            <div class="session-row-title" style="font-style:italic;">
+              i just added a new agent-island-icon.png to the...
+            </div>
+            <div class="session-row-status">Done! All 10 icon sizes have been replaced. Just rebuild the a...</div>
+          </div>
+          <div class="session-row-actions">
+            <span class="row-action-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            </span>
+            <span class="row-action-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+            </span>
+          </div>
+        </div>
+      </div><!-- end #listView -->
+
+      <!-- DETAIL VIEW (hidden initially) -->
+      <div id="detailView" style="display:none;">
+        <!-- Panel top bar: detail view -->
+        <div class="panel-topbar">
+          <div class="panel-topbar-left">
+            <span class="panel-back-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              sleep for 3 seconds
+            </span>
+          </div>
+          <div class="panel-topbar-right">
+            <span class="panel-icon-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </span>
+            <span class="panel-icon-btn green">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Detail body -->
+        <div class="panel-detail-body">
+          <div class="detail-spacer"></div>
+          <!-- Message bubble (right-aligned) -->
+          <div style="display:flex;justify-content:flex-end;padding:0 20px 12px;">
+            <div class="detail-message-bubble">sleep for 3 seconds</div>
+          </div>
+          <!-- Steps -->
+          <div class="detail-steps">
+            <div class="detail-step">
+              <div class="detail-step-dot green"></div>
+              <span class="detail-step-label">Bash</span>
+              <span class="detail-step-sublabel">Completed</span>
+            </div>
+            <div class="detail-step">
+              <div class="detail-step-dot gray"></div>
+              <span class="detail-step-label">Done.</span>
+            </div>
+          </div>
+          <!-- Input bar -->
+          <div class="detail-input-bar">
+            <span class="detail-input-text">Open Claude Code in tmux to enable messaging</span>
+            <div class="detail-send-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-    <div class="mac-screen">
-      <div class="terminal-pane">
-        <div><span class="t-prompt">~/projects/myapp</span> <span class="t-cmd">claude "refactor auth module"</span></div>
-        <div><span class="t-output">✓ Reading src/auth/index.ts...</span></div>
-        <div><span class="t-output">✓ Reading src/auth/middleware.ts...</span></div>
-        <div><span class="t-tool">⚡ Requesting: Bash(npm run test)</span></div>
-        <div><span class="t-output">  Waiting for approval</span> <span class="t-cursor"></span></div>
-      </div>
-      <div class="sidebar-pane">
-        <div class="sidebar-title">Sessions</div>
-        <div class="session-item active">
-          <span class="session-name">auth-refactor</span>
-          <span class="session-type claude">Claude Code</span>
-        </div>
-        <div class="session-item codex-active">
-          <span class="session-name">api-scaffold</span>
-          <span class="session-type codex">Codex</span>
-        </div>
-        <div class="session-item">
-          <span class="session-name">docs-update</span>
-          <span class="session-type claude">Claude Code</span>
-        </div>
-      </div>
-    </div>
+      </div><!-- end #detailView -->
+
+      <div class="panel-accent-line"></div>
+    </div><!-- end .notch-panel -->
   </div>
 </section>
 
@@ -1256,13 +1400,37 @@
     observer.observe(el);
   });
 
-  // Auto-cycle the notch demo on mobile (no hover)
-  const notch = document.getElementById('notchDemo');
-  if (window.matchMedia('(hover: none)').matches) {
-    setInterval(() => {
-      notch.classList.toggle('expanded');
-    }, 2800);
+  // Cycle notch panel between list view and detail view
+  const listView = document.getElementById('listView');
+  const detailView = document.getElementById('detailView');
+  let showingDetail = false;
+
+  function cyclePanel() {
+    showingDetail = !showingDetail;
+    if (showingDetail) {
+      listView.style.transition = 'opacity 0.35s ease';
+      listView.style.opacity = '0';
+      setTimeout(() => {
+        listView.style.display = 'none';
+        detailView.style.display = 'block';
+        detailView.style.opacity = '0';
+        detailView.style.transition = 'opacity 0.35s ease';
+        requestAnimationFrame(() => { detailView.style.opacity = '1'; });
+      }, 350);
+    } else {
+      detailView.style.transition = 'opacity 0.35s ease';
+      detailView.style.opacity = '0';
+      setTimeout(() => {
+        detailView.style.display = 'none';
+        listView.style.display = 'block';
+        listView.style.opacity = '0';
+        listView.style.transition = 'opacity 0.35s ease';
+        requestAnimationFrame(() => { listView.style.opacity = '1'; });
+      }, 350);
+    }
   }
+
+  setInterval(cyclePanel, 3800);
 </script>
 </body>
 </html>
