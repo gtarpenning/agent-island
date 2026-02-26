@@ -24,7 +24,7 @@
 
 ## Install
 
-[Download the latest release](https://github.com/gtarpenning/agent-island/releases/download/v1.4/AgentIsland-1.4.dmg) or build from source:
+[Download the latest release](https://github.com/gtarpenning/agent-island/releases/download/v1.5/AgentIsland-1.5.dmg) or build from source:
 
 ```bash
 xcodebuild -scheme AgentIsland -configuration Release build
