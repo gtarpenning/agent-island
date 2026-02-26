@@ -32,7 +32,7 @@ xcodebuild -scheme AgentIsland -configuration Release build
 
 ## How It Works
 
-Agent Island installs hooks into `~/.claude/hooks/` that communicate session state via a Unix socket. The app listens for events and displays them in the notch overlay.
+Agent Island installs hooks into `~/.claude/hooks/` and your cursor session history that communicate session state. The app listens for events and displays them in the notch overlay.
 
 When Claude or Codex needs permission to run a tool, the notch expands with approve/deny buttons—no need to switch to the terminal.
 
