@@ -2,7 +2,7 @@
   <img src="AgentIsland/Assets.xcassets/AppIcon.appiconset/icon_128x128.png" alt="Logo" width="100" height="100">
   <h3 align="center">Agent Island</h3>
   <p align="center">
-    A macOS menu bar app that brings Dynamic Island-style notifications to Claude Code CLI sessions.
+    A macOS app that brings Dynamic Island-style session management to Claude Code and Codex CLI sessions.
     <br />
     <br />
     <a href="https://github.com/gtarpenning/agent-island/releases/latest" target="_blank" rel="noopener noreferrer">
@@ -17,7 +17,7 @@
 ## Features
 
 - **Notch UI** — Animated overlay that expands from the MacBook notch
-- **Live Session Monitoring** — Track multiple Claude Code sessions in real-time
+- **Live Session Monitoring** — Track multiple Claude Code and Codex sessions in real-time
 - **Permission Approvals** — Approve or deny tool executions directly from the notch
 - **Chat History** — View full conversation history with markdown rendering
 - **Auto-Setup** — Hooks install automatically on first launch
@@ -34,16 +34,11 @@ xcodebuild -scheme AgentIsland -configuration Release build
 
 Agent Island installs hooks into `~/.claude/hooks/` that communicate session state via a Unix socket. The app listens for events and displays them in the notch overlay.
 
-When Claude needs permission to run a tool, the notch expands with approve/deny buttons—no need to switch to the terminal.
+When Claude or Codex needs permission to run a tool, the notch expands with approve/deny buttons—no need to switch to the terminal.
 
 ## Analytics
 
-Agent Island uses Mixpanel to collect anonymous usage data:
-
-- **App Launched** — App version, build number, macOS version
-- **Session Started** — When a new Claude Code session is detected
-
-No personal data or conversation content is collected.
+None, no snooping!
 
 ## License
 
