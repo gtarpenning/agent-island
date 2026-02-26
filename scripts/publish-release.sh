@@ -104,8 +104,8 @@ fi
 
 perl -0pi -e "s/MARKETING_VERSION = [0-9]+\\.[0-9]+;/MARKETING_VERSION = $NEXT_VERSION;/g; s/CURRENT_PROJECT_VERSION = [0-9]+;/CURRENT_PROJECT_VERSION = $NEXT_BUILD;/g" "$PBXPROJ"
 
-DMG_URL="$DMG_URL" perl -0pi -e 's#https://github\.com/gtarpenning/agent-island/releases/latest#$ENV{DMG_URL}#g' "$DOCS_FILE"
-DMG_URL="$DMG_URL" perl -0pi -e 's#\[(Download the latest release)\]\(https://github\.com/gtarpenning/agent-island/releases\)#[\1]($ENV{DMG_URL})#g' "$README_FILE"
+DMG_URL="$DMG_URL" perl -0pi -e 's#https://github\.com/gtarpenning/agent-island/releases/(?:latest|download/v[0-9]+(?:\.[0-9]+)+/AgentIsland-[0-9]+(?:\.[0-9]+)+\.dmg)#$ENV{DMG_URL}#g' "$DOCS_FILE"
+DMG_URL="$DMG_URL" perl -0pi -e 's#\[(Download the latest release)\]\([^)]+\)#[\1]($ENV{DMG_URL})#g' "$README_FILE"
 
 UPDATED_VERSION="$(sed -nE 's/.*MARKETING_VERSION = ([0-9]+\.[0-9]+);/\1/p' "$PBXPROJ" | head -n1)"
 if [ "$UPDATED_VERSION" != "$NEXT_VERSION" ]; then
