@@ -222,13 +222,15 @@ final class EventBus: ObservableObject, @unchecked Sendable {
             )
             await SessionStore.shared.process(.hookReceived(hookEvent))
 
-        case .custom(let eventName, _):
+        case .custom(let eventName, let payload):
             if eventName == "permissionSocketFailed" {
-                // Already handled by ClaudeAdapter emitting this; no SessionStore mapping needed
                 break
             }
-            // Unknown custom events: no-op
-            break
+            if eventName == "codexFilePath", let path = payload["path"], !path.isEmpty {
+                await SessionStore.shared.process(
+                    .codexSessionFileDiscovered(sessionId: event.sessionId, filePath: path)
+                )
+            }
         }
     }
 }

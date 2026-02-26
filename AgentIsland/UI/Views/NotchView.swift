@@ -34,6 +34,7 @@ struct NotchView: View {
     private let claudeOrange = Color(red: 0.85, green: 0.47, blue: 0.34)
     private let codexBlue = Color(red: 0.24, green: 0.52, blue: 0.96)
     private let codexGreen = Color(red: 0.06, green: 0.73, blue: 0.51)
+    private let waitingForInputDisplayDuration: TimeInterval = 30
 
     /// Whether any Claude session is currently processing or compacting
     private var isAnyProcessing: Bool {
@@ -48,15 +49,8 @@ struct NotchView: View {
     /// Whether any Claude session is waiting for user input (done/ready state) within the display window
     private var hasWaitingForInput: Bool {
         let now = Date()
-        let displayDuration: TimeInterval = 30  // Show checkmark for 30 seconds
-
         return sessionMonitor.instances.contains { session in
-            guard session.phase == .waitingForInput else { return false }
-            // Only show if within the 30-second display window
-            if let enteredAt = waitingForInputTimestamps[session.stableId] {
-                return now.timeIntervalSince(enteredAt) < displayDuration
-            }
-            return false
+            isSessionWaitingForInputVisible(session, now: now)
         }
     }
 
@@ -68,14 +62,23 @@ struct NotchView: View {
         sessionMonitor.instances.contains { $0.agentId == "codex" }
     }
 
-    private var activeActivitySessions: [SessionState] {
-        sessionMonitor.instances.filter {
-            $0.phase == .processing || $0.phase == .compacting || $0.phase.isWaitingForApproval
-        }
+    /// Sessions eligible for top activity icons (active/pending/waiting-for-input).
+    private var activityIconSessions: [SessionState] {
+        let now = Date()
+        return sessionMonitor.instances
+            .filter { session in
+                session.phase == .processing
+                    || session.phase == .compacting
+                    || session.phase.isWaitingForApproval
+                    || isSessionWaitingForInputVisible(session, now: now)
+            }
+            .sorted { $0.lastActivity > $1.lastActivity }
     }
 
-    private var hasMultipleActiveSessions: Bool {
-        activeActivitySessions.count > 1
+    /// Per-session icons for the closed notch, sorted by most recently active.
+    /// Includes only activity-relevant sessions so idle/stale sessions don't appear.
+    private var closedNotchIconSessions: [SessionState] {
+        Array(activityIconSessions.prefix(4))
     }
 
     private var hasBothAgentTypes: Bool {
@@ -108,6 +111,12 @@ struct NotchView: View {
         return isCodexOnly
     }
 
+    private func isSessionWaitingForInputVisible(_ session: SessionState, now: Date) -> Bool {
+        guard session.phase == .waitingForInput else { return false }
+        guard let enteredAt = waitingForInputTimestamps[session.stableId] else { return false }
+        return now.timeIntervalSince(enteredAt) < waitingForInputDisplayDuration
+    }
+
     // MARK: - Sizing
 
     private var closedNotchSize: CGSize {
@@ -122,11 +131,14 @@ struct NotchView: View {
         // Permission indicator adds width on left side only
         let permissionIndicatorWidth: CGFloat = hasPendingPermission ? 18 : 0
 
+        // Extra width for additional per-session icons beyond the first
+        let extraIconWidth = CGFloat(max(0, closedNotchIconSessions.count - 1)) * 8
+
         // Expand for processing activity
         if activityCoordinator.expandingActivity.show {
             switch activityCoordinator.expandingActivity.type {
             case .claude, .codex:
-                let baseWidth = 2 * max(0, closedNotchSize.height - 12) + 20
+                let baseWidth = 2 * max(0, closedNotchSize.height - 12) + 20 + extraIconWidth
                 return baseWidth + permissionIndicatorWidth
             case .none:
                 break
@@ -135,12 +147,12 @@ struct NotchView: View {
 
         // Expand for pending permissions (left indicator) or waiting for input (checkmark on right)
         if hasPendingPermission {
-            return 2 * max(0, closedNotchSize.height - 12) + 20 + permissionIndicatorWidth
+            return 2 * max(0, closedNotchSize.height - 12) + 20 + extraIconWidth + permissionIndicatorWidth
         }
 
         // Waiting for input just shows checkmark on right, no extra left indicator
         if hasWaitingForInput {
-            return 2 * max(0, closedNotchSize.height - 12) + 20
+            return 2 * max(0, closedNotchSize.height - 12) + 20 + extraIconWidth
         }
 
         return 0
@@ -307,13 +319,7 @@ struct NotchView: View {
             // Left side - crab + optional permission indicator (visible when processing, pending, or waiting for input)
             if showClosedActivity {
                 HStack(spacing: 4) {
-                    if hasBothAgentTypes {
-                        stackedDualActivityIcon()
-                    } else if usesCodexBranding {
-                        stackedActivityIcon(isCodex: true)
-                    } else {
-                        stackedActivityIcon(isCodex: false)
-                    }
+                    sessionStackedIcons()
 
                     // Permission indicator only (amber) - waiting for input shows checkmark on right
                     if hasPendingPermission {
@@ -324,7 +330,7 @@ struct NotchView: View {
                 .frame(
                     width: viewModel.status == .opened
                         ? nil
-                        : sideWidth + (hasPendingPermission ? 18 : 0) + (hasMultipleActiveSessions ? 8 : 0)
+                        : sideWidth + (hasPendingPermission ? 18 : 0) + CGFloat(max(0, closedNotchIconSessions.count - 1)) * 8
                 )
                 .padding(.leading, viewModel.status == .opened ? 8 : 0)
             }
@@ -366,61 +372,57 @@ struct NotchView: View {
         max(0, closedNotchSize.height - 12) + 10
     }
 
+    /// Renders the icon for a single session (with subtle black shadow outline).
     @ViewBuilder
-    private func stackedActivityIcon(isCodex: Bool) -> some View {
-        ZStack {
-            if hasMultipleActiveSessions {
-                if isCodex {
-                    CodexAnimationIcon(size: 14, isAnimating: isProcessing, fallbackColor: codexBlue)
-                        .opacity(0.6)
-                        .offset(x: 9, y: 0)
-                } else {
-                    ClaudeCrabIcon(size: 14, animateLegs: isProcessing)
-                        .opacity(0.6)
-                        .offset(x: 7, y: 1)
-                }
-            }
+    private func sessionIcon(_ session: SessionState) -> some View {
+        let isSessionAnimating = session.phase == .processing
+            || session.phase == .compacting
+            || session.phase.isWaitingForApproval
 
-            if isCodex {
-                ZStack {
-                    CodexAnimationIcon(size: 15, isAnimating: isProcessing, fallbackColor: .black)
-                    CodexAnimationIcon(size: 14, isAnimating: isProcessing, fallbackColor: codexBlue)
-                        .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: showClosedActivity)
-                }
-            } else {
-                ZStack {
-                    ClaudeCrabIcon(size: 15, color: .black, animateLegs: isProcessing)
-                    ClaudeCrabIcon(size: 14, animateLegs: isProcessing)
-                        .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: showClosedActivity)
-                }
+        if session.agentId == "codex" {
+            ZStack {
+                CodexAnimationIcon(size: 15, isAnimating: isSessionAnimating, fallbackColor: .black)
+                CodexAnimationIcon(size: 14, isAnimating: isSessionAnimating, fallbackColor: codexBlue)
+            }
+        } else {
+            ZStack {
+                ClaudeCrabIcon(size: 15, color: .black, animateLegs: isSessionAnimating)
+                ClaudeCrabIcon(size: 14, animateLegs: isSessionAnimating)
             }
         }
     }
 
+    /// Per-session icon stack: overlapping when closed, side-by-side when expanded.
+    /// Sessions are ordered most-recently-active first.
     @ViewBuilder
-    private func stackedDualActivityIcon() -> some View {
-        if usesCodexBranding {
-            ZStack {
-                ClaudeCrabIcon(size: 14, animateLegs: isProcessing)
-                    .opacity(0.6)
-                    .offset(x: 7, y: 1)
-
-                ZStack {
-                    CodexAnimationIcon(size: 15, isAnimating: isProcessing, fallbackColor: .black)
-                    CodexAnimationIcon(size: 14, isAnimating: isProcessing, fallbackColor: codexBlue)
-                        .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: showClosedActivity)
+    private func sessionStackedIcons() -> some View {
+        let sessions = closedNotchIconSessions
+        if viewModel.status == .opened {
+            // Expanded: one icon per session, side by side
+            HStack(spacing: 4) {
+                ForEach(Array(zip(sessions.indices, sessions)), id: \.0) { index, session in
+                    if index == 0 {
+                        sessionIcon(session)
+                            .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: showClosedActivity)
+                    } else {
+                        sessionIcon(session)
+                    }
                 }
             }
         } else {
+            // Collapsed: stack icons with offsets — most recent on top at x=0, older ones behind/right
             ZStack {
-                CodexAnimationIcon(size: 14, isAnimating: isProcessing, fallbackColor: codexBlue)
-                    .opacity(0.6)
-                    .offset(x: 9, y: 0)
-
-                ZStack {
-                    ClaudeCrabIcon(size: 15, color: .black, animateLegs: isProcessing)
-                    ClaudeCrabIcon(size: 14, animateLegs: isProcessing)
-                        .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: showClosedActivity)
+                ForEach(Array(zip(sessions.indices, sessions)), id: \.0) { index, session in
+                    if index == 0 {
+                        sessionIcon(session)
+                            .matchedGeometryEffect(id: "crab", in: activityNamespace, isSource: showClosedActivity)
+                            .zIndex(Double(sessions.count))
+                    } else {
+                        sessionIcon(session)
+                            .opacity(index == 1 ? 0.6 : 0.35)
+                            .offset(x: CGFloat(index) * 8, y: 0)
+                            .zIndex(Double(sessions.count - index))
+                    }
                 }
             }
         }
@@ -435,25 +437,19 @@ struct NotchView: View {
             // (headerRow handles crab + indicator when showClosedActivity is true)
             if !showClosedActivity {
                 if hasBothAgentTypes {
-                    ZStack {
+                    HStack(spacing: 4) {
                         if isCodexOnly {
-                            ClaudeCrabIcon(size: 14)
-                                .opacity(0.6)
-                                .offset(x: 7, y: 1)
-
                             ZStack {
                                 CodexAnimationIcon(size: 15, isAnimating: false, fallbackColor: .black)
                                 CodexAnimationIcon(size: 14, isAnimating: false, fallbackColor: codexBlue)
                             }
+                            ClaudeCrabIcon(size: 14)
                         } else {
-                            CodexAnimationIcon(size: 14, isAnimating: false, fallbackColor: codexBlue)
-                                .opacity(0.6)
-                                .offset(x: 9, y: 0)
-
                             ZStack {
                                 ClaudeCrabIcon(size: 15, color: .black)
                                 ClaudeCrabIcon(size: 14)
                             }
+                            CodexAnimationIcon(size: 14, isAnimating: false, fallbackColor: codexBlue)
                         }
                     }
                     .padding(.leading, 8)

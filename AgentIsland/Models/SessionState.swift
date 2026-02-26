@@ -54,6 +54,11 @@ struct SessionState: Equatable, Identifiable, Sendable {
     /// This removes pre-/clear items that no longer exist in the JSONL
     var needsClearReconciliation: Bool
 
+    // MARK: - Codex Session File
+
+    /// Path to the Codex session JSONL file (nil for Claude sessions)
+    var codexSessionFilePath: String?
+
     // MARK: - Timestamps
 
     var lastActivity: Date
@@ -98,6 +103,7 @@ struct SessionState: Equatable, Identifiable, Sendable {
         self.subagentState = subagentState
         self.conversationInfo = conversationInfo
         self.needsClearReconciliation = needsClearReconciliation
+        self.codexSessionFilePath = nil
         self.lastActivity = lastActivity
         self.createdAt = createdAt
     }

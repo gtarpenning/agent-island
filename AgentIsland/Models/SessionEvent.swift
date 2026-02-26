@@ -65,6 +65,11 @@ enum SessionEvent: Sendable {
     /// User issued /clear command - reset UI state while keeping session alive
     case clearDetected(sessionId: String)
 
+    // MARK: - Codex File Discovery
+
+    /// Codex session file path was discovered (from process FD scan)
+    case codexSessionFileDiscovered(sessionId: String, filePath: String)
+
     // MARK: - Session Lifecycle
 
     /// Session has ended
@@ -197,6 +202,8 @@ extension SessionEvent: CustomStringConvertible {
             return "interruptDetected(session: \(sessionId.prefix(8)))"
         case .clearDetected(let sessionId):
             return "clearDetected(session: \(sessionId.prefix(8)))"
+        case .codexSessionFileDiscovered(let sessionId, let filePath):
+            return "codexSessionFileDiscovered(session: \(sessionId.prefix(8)), path: \(filePath))"
         case .sessionEnded(let sessionId):
             return "sessionEnded(session: \(sessionId.prefix(8)))"
         case .loadHistory(let sessionId, _):

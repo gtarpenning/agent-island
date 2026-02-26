@@ -65,14 +65,17 @@ final class CodexAdapter: AgentAdapter, @unchecked Sendable {
     private func wireMonitor() {
         // Wire callbacks before starting so no events are missed.
 
-        monitor.onSessionStart = { [weak self] sessionId, cwd in
+        monitor.onSessionStart = { [weak self] sessionId, cwd, filePath in
             guard let self = self else { return }
-            let event = AgentEvent(
-                agentId: self.agentId,
-                sessionId: sessionId,
-                kind: .sessionStart(cwd: cwd, model: nil)
-            )
-            self.eventContinuation?.yield(event)
+            self.eventContinuation?.yield(AgentEvent(
+                agentId: self.agentId, sessionId: sessionId, kind: .sessionStart(cwd: cwd, model: nil)
+            ))
+            if let filePath {
+                self.eventContinuation?.yield(AgentEvent(
+                    agentId: self.agentId, sessionId: sessionId,
+                    kind: .custom(eventName: "codexFilePath", payload: ["path": filePath])
+                ))
+            }
             logger.info("CodexAdapter: session started \(sessionId, privacy: .public) cwd=\(cwd, privacy: .public)")
         }
 

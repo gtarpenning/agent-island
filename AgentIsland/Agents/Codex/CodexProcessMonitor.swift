@@ -35,8 +35,8 @@ final class CodexProcessMonitor: @unchecked Sendable {
 
     // MARK: - Callbacks
 
-    /// Called when a new Codex session is detected. Args: (sessionId, cwd)
-    var onSessionStart: ((String, String) -> Void)?
+    /// Called when a new Codex session is detected. Args: (sessionId, cwd, sessionFilePath)
+    var onSessionStart: ((String, String, String?) -> Void)?
 
     /// Called with each parsed output line. Args: (line, sessionId)
     var onLine: ((String, String) -> Void)?
@@ -153,7 +153,7 @@ final class CodexProcessMonitor: @unchecked Sendable {
         activeSessions[pid] = session
 
         logger.info("Attached to Codex PID=\(pid, privacy: .public) session=\(session.sessionId, privacy: .public) cwd=\(metadata.cwd, privacy: .public)")
-        onSessionStart?(session.sessionId, metadata.cwd)
+        onSessionStart?(session.sessionId, metadata.cwd, metadata.sessionFilePath)
     }
 
     nonisolated private func handleSessionEnd(pid: Int32, sessionId: String) {

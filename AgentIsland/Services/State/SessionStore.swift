@@ -72,6 +72,13 @@ actor SessionStore {
         case .clearDetected(let sessionId):
             await processClearDetected(sessionId: sessionId)
 
+        case .codexSessionFileDiscovered(let sessionId, let filePath):
+            if var session = sessions[sessionId] {
+                session.codexSessionFilePath = filePath
+                sessions[sessionId] = session
+                Self.logger.info("Codex session \(sessionId.prefix(8), privacy: .public) file: \(filePath, privacy: .public)")
+            }
+
         case .sessionEnded(let sessionId):
             await processSessionEnd(sessionId: sessionId)
 
@@ -592,10 +599,15 @@ actor SessionStore {
         guard var session = sessions[payload.sessionId] else { return }
 
         // Update conversationInfo from JSONL (summary, lastMessage, etc.)
-        let conversationInfo = await ConversationParser.shared.parse(
-            sessionId: payload.sessionId,
-            cwd: session.cwd
-        )
+        let conversationInfo: ConversationInfo
+        if session.agentId == "codex", let filePath = session.codexSessionFilePath {
+            conversationInfo = await CodexConversationParser.shared.parseConversationInfo(filePath: filePath)
+        } else {
+            conversationInfo = await ConversationParser.shared.parse(
+                sessionId: payload.sessionId,
+                cwd: session.cwd
+            )
+        }
         session.conversationInfo = conversationInfo
 
         // Handle /clear reconciliation - remove items that no longer exist in parser state
@@ -1019,39 +1031,58 @@ actor SessionStore {
     // MARK: - File Sync Scheduling
 
     private func scheduleFileSync(sessionId: String, cwd: String) {
-        // Cancel existing sync
         cancelPendingSync(sessionId: sessionId)
 
-        // Schedule new debounced sync
+        let codexFilePath = sessions[sessionId]?.codexSessionFilePath
+        let isCodex = sessions[sessionId]?.agentId == "codex"
+
         pendingSyncs[sessionId] = Task { [weak self, syncDebounceNs] in
             try? await Task.sleep(nanoseconds: syncDebounceNs)
             guard !Task.isCancelled else { return }
 
-            // Parse incrementally - only get NEW messages since last call
-            let result = await ConversationParser.shared.parseIncremental(
-                sessionId: sessionId,
-                cwd: cwd
-            )
+            if isCodex, let filePath = codexFilePath {
+                // Codex path: parse the Codex JSONL format directly
+                let result = await CodexConversationParser.shared.parseIncremental(
+                    sessionId: sessionId, filePath: filePath
+                )
+                guard !result.newMessages.isEmpty else { return }
 
-            if result.clearDetected {
-                await self?.process(.clearDetected(sessionId: sessionId))
+                let payload = FileUpdatePayload(
+                    sessionId: sessionId,
+                    cwd: cwd,
+                    messages: result.newMessages,
+                    isIncremental: true,
+                    completedToolIds: result.completedToolIds,
+                    toolResults: result.toolResults,
+                    structuredResults: [:]
+                )
+                await self?.process(.fileUpdated(payload))
+            } else {
+                // Claude path
+                let result = await ConversationParser.shared.parseIncremental(
+                    sessionId: sessionId,
+                    cwd: cwd
+                )
+
+                if result.clearDetected {
+                    await self?.process(.clearDetected(sessionId: sessionId))
+                }
+
+                guard !result.newMessages.isEmpty || result.clearDetected else {
+                    return
+                }
+
+                let payload = FileUpdatePayload(
+                    sessionId: sessionId,
+                    cwd: cwd,
+                    messages: result.newMessages,
+                    isIncremental: !result.clearDetected,
+                    completedToolIds: result.completedToolIds,
+                    toolResults: result.toolResults,
+                    structuredResults: result.structuredResults
+                )
+                await self?.process(.fileUpdated(payload))
             }
-
-            guard !result.newMessages.isEmpty || result.clearDetected else {
-                return
-            }
-
-            let payload = FileUpdatePayload(
-                sessionId: sessionId,
-                cwd: cwd,
-                messages: result.newMessages,
-                isIncremental: !result.clearDetected,
-                completedToolIds: result.completedToolIds,
-                toolResults: result.toolResults,
-                structuredResults: result.structuredResults
-            )
-
-            await self?.process(.fileUpdated(payload))
         }
     }
 
