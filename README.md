@@ -5,11 +5,11 @@
     A macOS menu bar app that brings Dynamic Island-style notifications to Claude Code CLI sessions.
     <br />
     <br />
-    <a href="https://github.com/farouqaldori/agent-island/releases/latest" target="_blank" rel="noopener noreferrer">
-      <img src="https://img.shields.io/github/v/release/farouqaldori/agent-island?style=rounded&color=white&labelColor=000000&label=release" alt="Release Version" />
+    <a href="https://github.com/gtarpenning/agent-island/releases/latest" target="_blank" rel="noopener noreferrer">
+      <img src="https://img.shields.io/github/v/release/gtarpenning/agent-island?style=rounded&color=white&labelColor=000000&label=release" alt="Release Version" />
     </a>
     <a href="#" target="_blank" rel="noopener noreferrer">
-      <img alt="GitHub Downloads" src="https://img.shields.io/github/downloads/farouqaldori/agent-island/total?style=rounded&color=white&labelColor=000000">
+      <img alt="GitHub Downloads" src="https://img.shields.io/github/downloads/gtarpenning/agent-island/total?style=rounded&color=white&labelColor=000000">
     </a>
   </p>
 </div>

@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Island — AI sessions, in the notch</title>
+<meta name="description" content="A macOS app that brings Dynamic Island-style notifications to Claude Code and Codex CLI sessions. Monitor, approve, and control your AI agents from the notch.">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07070b;
+    --bg2: #0d0d14;
+    --bg3: #12121c;
+    --border: rgba(255,255,255,0.07);
+    --border-bright: rgba(255,255,255,0.13);
+    --text: #e8e8f0;
+    --text-muted: #6b6b80;
+    --text-dim: #3a3a50;
+    --claude: #d4763a;
+    --codex: #10b981;
+    --accent: #7c6af7;
+    --accent2: #a78bfa;
+    --glow-claude: rgba(212,118,58,0.35);
+    --glow-codex: rgba(16,185,129,0.35);
+    --glow-accent: rgba(124,106,247,0.4);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 20px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(to bottom, rgba(7,7,11,0.95), transparent);
+    backdrop-filter: blur(0px);
+  }
+
+  .nav-logo {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .nav-logo-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--glow-accent);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-cta {
+    background: rgba(124,106,247,0.15);
+    border: 1px solid rgba(124,106,247,0.35);
+    color: var(--accent2) !important;
+    padding: 8px 18px;
+    border-radius: 6px;
+    transition: background 0.2s, border-color 0.2s !important;
+  }
+
+  .nav-cta:hover {
+    background: rgba(124,106,247,0.25) !important;
+    border-color: rgba(124,106,247,0.6) !important;
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 120px 48px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Radial bg glows */
+  .hero::after {
+    content: '';
+    position: absolute;
+    width: 700px; height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,106,247,0.12) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -60%);
+    pointer-events: none;
+  }
+
+  /* App icon */
+  .hero-icon-wrap {
+    position: relative;
+    margin-bottom: 36px;
+    animation: fade-up 0.6s ease both;
+  }
+
+  .hero-icon-wrap::before {
+    content: '';
+    position: absolute;
+    inset: -24px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,106,247,0.35) 0%, rgba(167,139,250,0.15) 50%, transparent 75%);
+    animation: glow-breathe 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .hero-icon {
+    width: 120px;
+    height: 120px;
+    border-radius: 28px;
+    display: block;
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 8px 32px rgba(124,106,247,0.4)) drop-shadow(0 2px 8px rgba(0,0,0,0.6));
+  }
+
+  .hero-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    background: rgba(124,106,247,0.1);
+    border: 1px solid rgba(124,106,247,0.25);
+    padding: 5px 14px;
+    border-radius: 100px;
+    margin-bottom: 28px;
+    animation: fade-up 0.6s 0.05s ease both;
+  }
+
+  .hero-headline {
+    font-size: clamp(42px, 7vw, 86px);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    text-align: center;
+    max-width: 840px;
+    animation: fade-up 0.6s 0.1s ease both;
+  }
+
+  .hero-headline em {
+    font-style: normal;
+    background: linear-gradient(135deg, #a78bfa, #7c6af7, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    margin-top: 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--text-muted);
+    text-align: center;
+    max-width: 520px;
+    animation: fade-up 0.6s 0.2s ease both;
+  }
+
+  .hero-badges {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    animation: fade-up 0.6s 0.25s ease both;
+  }
+
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .badge-claude {
+    background: rgba(212,118,58,0.12);
+    border: 1px solid rgba(212,118,58,0.3);
+    color: #e8925a;
+  }
+
+  .badge-codex {
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.25);
+    color: #34d399;
+  }
+
+  .badge-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+  }
+
+  .badge-claude .badge-dot { background: #d4763a; }
+  .badge-codex .badge-dot { background: #10b981; }
+
+  .hero-actions {
+    display: flex;
+    gap: 14px;
+    margin-top: 44px;
+    animation: fade-up 0.6s 0.3s ease both;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 36px;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: 10px;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 0 40px rgba(124,106,247,0.5), 0 4px 20px rgba(0,0,0,0.5);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 50px rgba(124,106,247,0.6), 0 8px 24px rgba(0,0,0,0.5);
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 28px;
+    background: transparent;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border-radius: 8px;
+    border: 1px solid var(--border-bright);
+    transition: color 0.2s, border-color 0.2s, transform 0.15s;
+  }
+
+  .btn-secondary:hover {
+    color: var(--text);
+    border-color: rgba(255,255,255,0.25);
+    transform: translateY(-2px);
+  }
+
+  /* ─── NOTCH MOCKUP ─── */
+  .notch-stage {
+    margin-top: 72px;
+    width: 100%;
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: fade-up 0.7s 0.4s ease both;
+    position: relative;
+  }
+
+  /* Glow behind notch */
+  .notch-glow {
+    position: absolute;
+    width: 400px; height: 120px;
+    background: radial-gradient(ellipse, rgba(124,106,247,0.3) 0%, rgba(212,118,58,0.15) 40%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    filter: blur(20px);
+    animation: glow-breathe 3s ease-in-out infinite;
+  }
+
+  @keyframes glow-breathe {
+    0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  }
+
+  /* Mac bar top */
+  .mac-bar {
+    width: 100%;
+    height: 28px;
+    background: linear-gradient(to bottom, #1c1c28, #16161f);
+    border-radius: 16px 16px 0 0;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* The notch itself */
+  .notch {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 160px;
+    height: 28px;
+    background: #07070b;
+    border-radius: 0 0 18px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+                height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 10;
+    cursor: pointer;
+  }
+
+  .notch.expanded {
+    width: 340px;
+    height: 80px;
+    border-radius: 0 0 28px 28px;
+  }
+
+  .notch-collapsed-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 1;
+    transition: opacity 0.2s;
+  }
+
+  .notch.expanded .notch-collapsed-content {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  .notch-indicator {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--claude);
+    box-shadow: 0 0 8px var(--glow-claude);
+    animation: blink 1.8s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .notch-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.05em;
+  }
+
+  .notch-expanded-content {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 10px 18px;
+    gap: 6px;
+    transition: opacity 0.25s 0.2s;
+    pointer-events: none;
+  }
+
+  .notch.expanded .notch-expanded-content {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .notch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .notch-session-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.8);
+    letter-spacing: 0.03em;
+  }
+
+  .notch-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--claude);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .notch-status::before {
+    content: '';
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 5px currentColor;
+  }
+
+  .notch-tool {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.06);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .notch-approve-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .notch-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+  }
+
+  .notch-btn-allow {
+    background: rgba(16,185,129,0.25);
+    color: #34d399;
+    border: 1px solid rgba(16,185,129,0.3);
+  }
+
+  .notch-btn-deny {
+    background: rgba(239,68,68,0.15);
+    color: #f87171;
+    border: 1px solid rgba(239,68,68,0.2);
+  }
+
+  /* Mac screen below notch bar */
+  .mac-screen {
+    width: 100%;
+    height: 280px;
+    background: linear-gradient(160deg, #0f0f18 0%, #0a0a12 100%);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 16px 16px;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+    display: flex;
+  }
+
+  /* Terminal pane */
+  .terminal-pane {
+    flex: 1;
+    padding: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    line-height: 1.8;
+  }
+
+  .t-prompt { color: var(--text-dim); }
+  .t-cmd { color: var(--text); }
+  .t-output { color: var(--text-muted); }
+  .t-tool { color: var(--claude); }
+  .t-cursor {
+    display: inline-block;
+    width: 7px; height: 13px;
+    background: var(--accent2);
+    vertical-align: middle;
+    animation: cursor-blink 1s step-end infinite;
+  }
+  @keyframes cursor-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* Sidebar */
+  .sidebar-pane {
+    width: 180px;
+    border-left: 1px solid var(--border);
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sidebar-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .session-item {
+    padding: 7px 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: border-color 0.2s;
+  }
+
+  .session-item.active {
+    border-color: rgba(212,118,58,0.3);
+    background: rgba(212,118,58,0.05);
+  }
+
+  .session-item.codex-active {
+    border-color: rgba(16,185,129,0.3);
+    background: rgba(16,185,129,0.05);
+  }
+
+  .session-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text);
+  }
+
+  .session-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+  }
+
+  .session-type.claude { color: var(--claude); }
+  .session-type.codex { color: var(--codex); }
+
+  /* ─── SECTIONS ─── */
+  section { padding: 100px 48px; }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 20px;
+    display: block;
+    opacity: 0;
+    animation: fade-up 0.5s ease both;
+    animation-play-state: paused;
+  }
+
+  .section-label.visible { animation-play-state: running; }
+
+  .section-title {
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+    max-width: 600px;
+    opacity: 0;
+    animation: fade-up 0.5s 0.1s ease both;
+    animation-play-state: paused;
+  }
+
+  .section-title.visible { animation-play-state: running; }
+
+  /* ─── FEATURES ─── */
+  .features-section {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .features-grid {
+    margin-top: 56px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .feature-card {
+    background: var(--bg2);
+    padding: 32px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: background 0.2s;
+    opacity: 0;
+    animation: fade-up 0.5s ease both;
+    animation-play-state: paused;
+  }
+
+  .feature-card.visible { animation-play-state: running; }
+  .feature-card:hover { background: var(--bg3); }
+
+  .feature-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(124,106,247,0.1);
+    border: 1px solid rgba(124,106,247,0.2);
+    font-size: 18px;
+  }
+
+  .feature-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .feature-desc {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-muted);
+  }
+
+  /* ─── AGENT LOGOS ─── */
+  .agents-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 80px 48px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .agents-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 40px;
+  }
+
+  .agents-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .agent-pill {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px;
+    border-radius: 12px;
+    border: 1px solid;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    transition: transform 0.15s;
+  }
+
+  .agent-pill:hover { transform: translateY(-2px); }
+
+  .agent-pill.claude {
+    background: rgba(212,118,58,0.08);
+    border-color: rgba(212,118,58,0.25);
+    color: #e8925a;
+  }
+
+  .agent-pill.codex {
+    background: rgba(16,185,129,0.08);
+    border-color: rgba(16,185,129,0.25);
+    color: #34d399;
+  }
+
+  .agent-icon {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .agent-plus {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    color: var(--text-dim);
+    line-height: 1;
+  }
+
+  /* ─── HOW IT WORKS ─── */
+  .how-section { background: var(--bg); }
+
+  .steps {
+    margin-top: 64px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    position: relative;
+    max-width: 800px;
+  }
+
+  .steps::before {
+    content: '';
+    position: absolute;
+    top: 28px;
+    left: calc(16.66% + 14px);
+    right: calc(16.66% + 14px);
+    height: 1px;
+    background: linear-gradient(to right, rgba(124,106,247,0.5), rgba(124,106,247,0.5));
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    padding: 0 24px;
+    opacity: 0;
+    animation: fade-up 0.5s ease both;
+    animation-play-state: paused;
+  }
+
+  .step.visible { animation-play-state: running; }
+
+  .step-num {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--bg3);
+    border: 1px solid var(--border-bright);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent2);
+    position: relative;
+    z-index: 1;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .step:hover .step-num {
+    border-color: rgba(124,106,247,0.5);
+    box-shadow: 0 0 20px var(--glow-accent);
+  }
+
+  .step-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .step-desc {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-muted);
+  }
+
+  /* ─── INSTALL ─── */
+  .install-section {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+  }
+
+  .install-block {
+    margin-top: 48px;
+    max-width: 600px;
+  }
+
+  .code-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .code-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  .code-dot:nth-child(1) { background: #ff5f57; }
+  .code-dot:nth-child(2) { background: #febc2e; }
+  .code-dot:nth-child(3) { background: #28c840; }
+
+  .code-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .code-body {
+    padding: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text-muted);
+  }
+
+  .code-body .comment { color: var(--text-dim); }
+  .code-body .cmd { color: var(--text); }
+  .code-body .url { color: var(--accent2); }
+
+  .install-note {
+    margin-top: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .install-note a {
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ─── DOWNLOAD CTA ─── */
+  .cta-section {
+    text-align: center;
+    padding: 120px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,106,247,0.1) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .cta-title {
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 20px;
+  }
+
+  .cta-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 48px;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .footer-left {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  .footer-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .footer-link {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.2s;
+  }
+
+  .footer-link:hover { color: var(--text-muted); }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    nav { padding: 16px 24px; }
+    .nav-links { display: none; }
+    section { padding: 72px 24px; }
+    .hero { padding: 100px 24px 60px; }
+    .steps { grid-template-columns: 1fr; gap: 40px; }
+    .steps::before { display: none; }
+    footer { padding: 28px 24px; flex-direction: column; align-items: flex-start; }
+    .agents-section { padding: 60px 24px; }
+    .cta-section { padding: 80px 24px; }
+  }
+
+  /* Hover expand notch on desktop */
+  @media (hover: hover) {
+    .notch:hover {
+      width: 340px;
+      height: 80px;
+      border-radius: 0 0 28px 28px;
+    }
+    .notch:hover .notch-collapsed-content {
+      opacity: 0;
+      pointer-events: none;
+      position: absolute;
+    }
+    .notch:hover .notch-expanded-content {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">
+    <span class="nav-logo-dot"></span>
+    Agent Island
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="https://github.com/gtarpenning/agent-island" target="_blank" class="nav-cta">GitHub</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-icon-wrap">
+    <img src="icon.png" alt="Agent Island" class="hero-icon">
+  </div>
+  <div class="hero-tag">macOS · Menu Bar · v1.0</div>
+  <h1 class="hero-headline">Your AI sessions,<br><em>in the notch.</em></h1>
+  <p class="hero-sub">Monitor Claude Code and Codex sessions, approve tool calls, and review history — without switching windows.</p>
+  <div class="hero-badges">
+    <span class="badge badge-claude"><span class="badge-dot"></span>Claude Code</span>
+    <span class="badge badge-codex"><span class="badge-dot"></span>Codex</span>
+  </div>
+  <div class="hero-actions">
+    <a href="https://github.com/gtarpenning/agent-island/releases/latest" class="btn-primary" target="_blank">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L8 11M8 11L4 7M8 11L12 7" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13H14" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Download for macOS
+    </a>
+    <a href="https://github.com/gtarpenning/agent-island" class="btn-secondary" target="_blank">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+      View on GitHub
+    </a>
+  </div>
+
+  <!-- NOTCH DEMO -->
+  <div class="notch-stage">
+    <div class="notch-glow"></div>
+    <div class="mac-bar">
+      <div class="notch" id="notchDemo">
+        <div class="notch-collapsed-content">
+          <div class="notch-indicator"></div>
+          <span class="notch-label">2 sessions</span>
+        </div>
+        <div class="notch-expanded-content">
+          <div class="notch-row">
+            <span class="notch-session-name">auth-refactor</span>
+            <span class="notch-status">running</span>
+          </div>
+          <div class="notch-row">
+            <span class="notch-tool">Bash: npm run test</span>
+            <div class="notch-approve-row">
+              <button class="notch-btn notch-btn-allow">Allow</button>
+              <button class="notch-btn notch-btn-deny">Deny</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mac-screen">
+      <div class="terminal-pane">
+        <div><span class="t-prompt">~/projects/myapp</span> <span class="t-cmd">claude "refactor auth module"</span></div>
+        <div><span class="t-output">✓ Reading src/auth/index.ts...</span></div>
+        <div><span class="t-output">✓ Reading src/auth/middleware.ts...</span></div>
+        <div><span class="t-tool">⚡ Requesting: Bash(npm run test)</span></div>
+        <div><span class="t-output">  Waiting for approval</span> <span class="t-cursor"></span></div>
+      </div>
+      <div class="sidebar-pane">
+        <div class="sidebar-title">Sessions</div>
+        <div class="session-item active">
+          <span class="session-name">auth-refactor</span>
+          <span class="session-type claude">Claude Code</span>
+        </div>
+        <div class="session-item codex-active">
+          <span class="session-name">api-scaffold</span>
+          <span class="session-type codex">Codex</span>
+        </div>
+        <div class="session-item">
+          <span class="session-name">docs-update</span>
+          <span class="session-type claude">Claude Code</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AGENT COMPATIBILITY -->
+<div class="agents-section">
+  <div class="agents-label">Works with</div>
+  <div class="agents-row">
+    <div class="agent-pill claude">
+      <div class="agent-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="rgba(212,118,58,0.3)"/><path d="M8 12h8M12 8v8" stroke="#d4763a" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      Claude Code
+    </div>
+    <div class="agent-plus">+</div>
+    <div class="agent-pill codex">
+      <div class="agent-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="4" fill="rgba(16,185,129,0.2)"/><path d="M8 9l3 3-3 3M13 15h3" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      OpenAI Codex
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <span class="section-label">Capabilities</span>
+  <h2 class="section-title">Everything you need, nowhere near your way.</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="4" rx="2" fill="rgba(124,106,247,0.5)"/><rect x="2" y="10" width="20" height="11" rx="2" stroke="rgba(124,106,247,0.6)" stroke-width="1.5" fill="none"/></svg>
+      </div>
+      <div class="feature-title">Notch UI</div>
+      <div class="feature-desc">Animated overlay that expands from the MacBook notch. Stays out of your way until it matters.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="rgba(124,106,247,0.5)"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="rgba(124,106,247,0.6)" stroke-width="1.5" stroke-linecap="round"/><path d="M5.636 5.636l2.121 2.121M16.243 16.243l2.121 2.121M5.636 18.364l2.121-2.121M16.243 7.757l2.121-2.121" stroke="rgba(124,106,247,0.4)" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="feature-title">Live Session Monitoring</div>
+      <div class="feature-desc">Track multiple Claude Code and Codex sessions simultaneously. See what every agent is doing right now.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="rgba(124,106,247,0.8)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="rgba(124,106,247,0.5)" stroke-width="1.5" fill="none"/></svg>
+      </div>
+      <div class="feature-title">Permission Approvals</div>
+      <div class="feature-desc">Approve or deny tool executions directly from the notch. No terminal switch needed.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 10h16M4 14h10" stroke="rgba(124,106,247,0.7)" stroke-width="1.5" stroke-linecap="round"/><circle cx="17" cy="17" r="4" stroke="rgba(124,106,247,0.5)" stroke-width="1.5" fill="none"/></svg>
+      </div>
+      <div class="feature-title">Chat History</div>
+      <div class="feature-desc">Full conversation history with markdown rendering. Review the full context without leaving your flow.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" stroke="rgba(124,106,247,0.7)" stroke-width="1.5" fill="none"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="rgba(124,106,247,0.5)" stroke-width="1.5"/></svg>
+      </div>
+      <div class="feature-title">Auto-Setup</div>
+      <div class="feature-desc">Hooks install automatically on first launch. Zero configuration. Open the app and start working.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="rgba(124,106,247,0.5)" stroke-width="1.5" fill="none"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" stroke="rgba(124,106,247,0.4)" stroke-width="1.5" fill="none"/></svg>
+      </div>
+      <div class="feature-title">macOS Native</div>
+      <div class="feature-desc">Built for macOS 15.6+. Uses native notch space. No menu bar clutter, no separate window.</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <span class="section-label">Process</span>
+  <h2 class="section-title">Up and running in three steps.</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-title">Download</div>
+      <div class="step-desc">Grab the .dmg from the latest release. Drag Agent Island to Applications.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-title">Launch</div>
+      <div class="step-desc">Open the app. Hooks are installed automatically into ~/.claude/hooks/. Start a Claude Code or Codex session.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-title">Approve</div>
+      <div class="step-desc">When your agent needs a tool permission, the notch expands. Tap Allow or Deny — then keep coding.</div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section class="install-section" id="install">
+  <span class="section-label">Install</span>
+  <h2 class="section-title">Or build from source.</h2>
+  <div class="install-block">
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots">
+          <div class="code-dot"></div>
+          <div class="code-dot"></div>
+          <div class="code-dot"></div>
+        </div>
+        <span class="code-label">Terminal</span>
+      </div>
+      <div class="code-body">
+        <div><span class="comment"># Clone the repo</span></div>
+        <div><span class="cmd">git clone <span class="url">https://github.com/gtarpenning/agent-island</span></span></div>
+        <div>&nbsp;</div>
+        <div><span class="comment"># Build with Xcode</span></div>
+        <div><span class="cmd">xcodebuild -scheme AgentIsland -configuration Release build</span></div>
+      </div>
+    </div>
+    <p class="install-note">Requires macOS 15.6+ and <a href="https://docs.anthropic.com/en/docs/claude-code" target="_blank">Claude Code CLI</a> or <a href="https://openai.com/codex" target="_blank">OpenAI Codex</a>.</p>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2 class="cta-title">Start watching your<br>agents work.</h2>
+  <p class="cta-sub">Free and open source. Apache 2.0.</p>
+  <a href="https://github.com/gtarpenning/agent-island/releases/latest" class="btn-primary" target="_blank">
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1L8 11M8 11L4 7M8 11L12 7" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13H14" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+    Download Agent Island
+  </a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">
+    Agent Island — Apache 2.0 License<br>
+    A macOS notch app for AI CLI sessions.
+  </div>
+  <div class="footer-right">
+    <a href="https://github.com/gtarpenning/agent-island" class="footer-link" target="_blank">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+      GitHub
+    </a>
+    <a href="https://github.com/gtarpenning/agent-island/releases/latest" class="footer-link" target="_blank">
+      Releases
+    </a>
+  </div>
+</footer>
+
+<script>
+  // Intersection observer for scroll animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(el => {
+      if (el.isIntersecting) {
+        el.target.classList.add('visible');
+        // stagger children
+        const cards = el.target.querySelectorAll('.feature-card, .step');
+        cards.forEach((c, i) => {
+          c.style.animationDelay = `${i * 0.08}s`;
+          c.classList.add('visible');
+        });
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.section-label, .section-title, .feature-card, .step').forEach(el => {
+    observer.observe(el);
+  });
+
+  // Auto-cycle the notch demo on mobile (no hover)
+  const notch = document.getElementById('notchDemo');
+  if (window.matchMedia('(hover: none)').matches) {
+    setInterval(() => {
+      notch.classList.toggle('expanded');
+    }, 2800);
+  }
+</script>
+</body>
+</html>
