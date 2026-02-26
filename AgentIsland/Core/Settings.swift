@@ -29,6 +29,12 @@ enum NotificationSound: String, CaseIterable {
     var soundName: String? {
         self == .none ? nil : rawValue
     }
+
+    /// Parses a persisted sound value with case-insensitive matching.
+    static func fromStoredValue(_ rawValue: String) -> NotificationSound? {
+        let normalized = rawValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return allCases.first { $0.rawValue.lowercased() == normalized }
+    }
 }
 
 enum AppSettings {
@@ -50,7 +56,7 @@ enum AppSettings {
     /// The sound to play when an agent finishes and is ready for input.
     static func notificationSound(for agentId: String) -> NotificationSound {
         guard let rawValue = defaults.string(forKey: Keys.notificationSound),
-              let sound = NotificationSound(rawValue: rawValue) else {
+              let sound = NotificationSound.fromStoredValue(rawValue) else {
             return defaultNotificationSound(for: agentId)
         }
         return sound

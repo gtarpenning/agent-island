@@ -5,7 +5,6 @@
 //  Minimal menu matching Dynamic Island aesthetic
 //
 
-import ApplicationServices
 import Combine
 import SwiftUI
 import ServiceManagement
@@ -20,59 +19,58 @@ struct NotchMenuView: View {
     @ObservedObject private var soundSelector = SoundSelector.shared
     @State private var hooksInstalled: Bool = false
     @State private var launchAtLogin: Bool = false
+    @State private var isBackHovered: Bool = false
     @ObservedObject private var agentRegistry = AgentRegistry.shared
-
 
     @ViewBuilder
     private var agentsSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("AGENTS")
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundColor(.white.opacity(0.3))
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+        HStack(spacing: 8) {
+            // Claude toggle
+            AgentToggleChip(
+                label: "Claude Code",
+                color: Color(red: 0.85, green: 0.47, blue: 0.34),
+                isEnabled: agentRegistry.enabledAgentIds.contains("claude"),
+                onToggle: {
+                    Task { await agentRegistry.toggle(agentId: "claude") }
+                }
+            )
 
-            HStack(spacing: 8) {
-                // Claude toggle
-                AgentToggleChip(
-                    label: "Claude Code",
-                    color: Color(red: 0.85, green: 0.47, blue: 0.34),
-                    isEnabled: agentRegistry.enabledAgentIds.contains("claude"),
-                    onToggle: {
-                        Task { await agentRegistry.toggle(agentId: "claude") }
-                    }
-                )
-
-                // Codex toggle
-                AgentToggleChip(
-                    label: "Codex",
-                    color: Color(red: 0.24, green: 0.52, blue: 0.96),
-                    isEnabled: agentRegistry.enabledAgentIds.contains("codex"),
-                    onToggle: {
-                        Task { await agentRegistry.toggle(agentId: "codex") }
-                    }
-                )
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
+            // Codex toggle
+            AgentToggleChip(
+                label: "Codex",
+                color: Color(red: 0.24, green: 0.52, blue: 0.96),
+                isEnabled: agentRegistry.enabledAgentIds.contains("codex"),
+                onToggle: {
+                    Task { await agentRegistry.toggle(agentId: "codex") }
+                }
+            )
         }
     }
 
     var body: some View {
         VStack(spacing: 4) {
-            // Back button
-            MenuRow(
-                icon: "chevron.left",
-                label: "Back"
-            ) {
-                viewModel.toggleMenu()
+            HStack(spacing: 10) {
+                Button {
+                    viewModel.toggleMenu()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.white.opacity(isBackHovered ? 1.0 : 0.7))
+                        .frame(width: 26, height: 26)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(isBackHovered ? Color.white.opacity(0.12) : Color.white.opacity(0.06))
+                        )
+                }
+                .buttonStyle(.plain)
+                .onHover { isBackHovered = $0 }
+
+                agentsSection
+
+                Spacer(minLength: 0)
             }
-
-            Divider()
-                .background(Color.white.opacity(0.08))
-                .padding(.vertical, 4)
-
-            agentsSection
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
 
             Divider()
                 .background(Color.white.opacity(0.08))
@@ -119,8 +117,6 @@ struct NotchMenuView: View {
                 }
             }
 
-            AccessibilityRow(isEnabled: AXIsProcessTrusted())
-
             Divider()
                 .background(Color.white.opacity(0.08))
                 .padding(.vertical, 4)
@@ -132,7 +128,7 @@ struct NotchMenuView: View {
                 icon: "star",
                 label: "Star on GitHub"
             ) {
-                if let url = URL(string: "https://github.com/farouqaldori/claude-island") {
+                if let url = URL(string: "https://github.com/gtarpenning/agent-island") {
                     NSWorkspace.shared.open(url)
                 }
             }
@@ -404,79 +400,6 @@ struct UpdateRow: View {
             updateManager.installAndRelaunch()
         default:
             break
-        }
-    }
-}
-
-// MARK: - Accessibility Permission Row
-
-struct AccessibilityRow: View {
-    let isEnabled: Bool
-
-    @State private var isHovered = false
-    @State private var refreshTrigger = false
-
-    private var currentlyEnabled: Bool {
-        // Re-check on each render when refreshTrigger changes
-        _ = refreshTrigger
-        return isEnabled
-    }
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "hand.raised")
-                .font(.system(size: 12))
-                .foregroundColor(textColor)
-                .frame(width: 16)
-
-            Text("Accessibility")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(textColor)
-
-            Spacer()
-
-            if isEnabled {
-                Circle()
-                    .fill(TerminalColors.green)
-                    .frame(width: 6, height: 6)
-
-                Text("On")
-                    .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.4))
-            } else {
-                Button(action: openAccessibilitySettings) {
-                    Text("Enable")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.black)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(
-                            RoundedRectangle(cornerRadius: 5)
-                                .fill(Color.white)
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(isHovered ? Color.white.opacity(0.08) : Color.clear)
-        )
-        .onHover { isHovered = $0 }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            refreshTrigger.toggle()
-        }
-    }
-
-    private var textColor: Color {
-        .white.opacity(isHovered ? 1.0 : 0.7)
-    }
-
-    private func openAccessibilitySettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-            NSWorkspace.shared.open(url)
         }
     }
 }
