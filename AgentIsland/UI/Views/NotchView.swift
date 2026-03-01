@@ -128,8 +128,8 @@ struct NotchView: View {
 
     /// Extra width for expanding activities (like Dynamic Island)
     private var expansionWidth: CGFloat {
-        // Permission indicator adds width on left side only
-        let permissionIndicatorWidth: CGFloat = hasPendingPermission ? 18 : 0
+        // Permission indicator adds width on left side only (14pt icon + 2pt spacing)
+        let permissionIndicatorWidth: CGFloat = hasPendingPermission ? 16 : 0
 
         // Extra width for additional per-session icons beyond the first
         let extraIconWidth = CGFloat(max(0, closedNotchIconSessions.count - 1)) * 8
@@ -256,6 +256,7 @@ struct NotchView: View {
         .preferredColorScheme(.dark)
         .onAppear {
             sessionMonitor.startMonitoring()
+            viewModel.closedExpansionWidth = expansionWidth
             // On non-notched devices, keep visible so users have a target to interact with
             if !viewModel.hasPhysicalNotch {
                 isVisible = true
@@ -318,7 +319,7 @@ struct NotchView: View {
         HStack(spacing: 0) {
             // Left side - crab + optional permission indicator (visible when processing, pending, or waiting for input)
             if showClosedActivity {
-                HStack(spacing: 4) {
+                HStack(spacing: 2) {
                     sessionStackedIcons()
 
                     // Permission indicator only (amber) - waiting for input shows checkmark on right
@@ -330,7 +331,7 @@ struct NotchView: View {
                 .frame(
                     width: viewModel.status == .opened
                         ? nil
-                        : sideWidth + (hasPendingPermission ? 18 : 0) + CGFloat(max(0, closedNotchIconSessions.count - 1)) * 8
+                        : sideWidth + (hasPendingPermission ? 16 : 0) + CGFloat(max(0, closedNotchIconSessions.count - 1)) * 8
                 )
                 .padding(.leading, viewModel.status == .opened ? 8 : 0)
             }
@@ -524,6 +525,9 @@ struct NotchView: View {
     // MARK: - Event Handlers
 
     private func handleProcessingChange() {
+        // Keep the view model's expansion width in sync so click hit-testing covers the full pill
+        viewModel.closedExpansionWidth = expansionWidth
+
         if isAnyProcessing || hasPendingPermission {
             // Show activity matching the active agent.
             activityCoordinator.showActivity(type: activeProcessingType)

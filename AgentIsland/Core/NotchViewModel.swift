@@ -45,6 +45,8 @@ class NotchViewModel: ObservableObject {
     @Published var openReason: NotchOpenReason = .unknown
     @Published var contentType: NotchContentType = .instances
     @Published var isHovering: Bool = false
+    /// Current pill expansion width — updated by NotchView to widen the click hitbox
+    @Published var closedExpansionWidth: CGFloat = 0
 
     // MARK: - Dependencies
 
@@ -188,7 +190,7 @@ class NotchViewModel: ObservableObject {
                 }
             }
         case .closed, .popping:
-            if geometry.isPointInNotch(location) {
+            if geometry.isPointInNotch(location, expansionWidth: closedExpansionWidth) {
                 notchOpen(reason: .click)
             }
         }

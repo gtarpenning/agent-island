@@ -38,8 +38,12 @@ struct NotchGeometry: Sendable {
     }
 
     /// Check if a point is in the notch area (with padding for easier interaction)
-    func isPointInNotch(_ point: CGPoint) -> Bool {
-        notchScreenRect.insetBy(dx: -10, dy: -5).contains(point)
+    /// `expansionWidth` accounts for the expanded pill state (agent icons on the sides)
+    func isPointInNotch(_ point: CGPoint, expansionWidth: CGFloat = 0) -> Bool {
+        let halfExpansion = expansionWidth / 2
+        return notchScreenRect
+            .insetBy(dx: -(10 + halfExpansion), dy: -5)
+            .contains(point)
     }
 
     /// Check if a point is in the opened panel area
